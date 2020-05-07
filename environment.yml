@@ -1,7 +1,11 @@
-name: searchontology
+name: baltogui
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.6.9
-  - requests=2.22.0
+  - python=3.7.7
+  - ipywidgets=7.5.1
+  - ipyleaflet=0.12.4
+  - pydap=3.2.2
+  - time=1.8
+  - requests=2.23.0
