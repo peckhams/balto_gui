@@ -1,0 +1,7 @@
+name: searchontology
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.6.9
+  - requests=2.22.0
