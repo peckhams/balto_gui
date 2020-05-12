@@ -18,3 +18,4 @@ Version 2<br>
 Version 1<br>
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/mariutzica/balto_gui/83d7700936c6236b3f890a231664855bea97fe83)
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/mariutzica/balto_gui/a272d2bee1ea3d1be25e26d4402565cb74f9a63c)
