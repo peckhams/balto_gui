@@ -13,7 +13,7 @@ To run this Jupyter notebook without Binder, it is recommended to install Python
 
 Version 2<br>
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/peckhams/balto_gui/master?filepath=BALTO_GUI_v2.ipynb)
-<br> <br>
+<br>
 
 Version 1<br>
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/mariutzica/balto_gui/83d7700936c6236b3f890a231664855bea97fe83)
