@@ -9,4 +9,3 @@ dependencies:
   - pydap=3.2.2
   - time=1.8
   - requests=2.23.0
-  - balto_gui
