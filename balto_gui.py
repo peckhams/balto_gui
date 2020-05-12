@@ -818,7 +818,8 @@ class balto_gui:
         #-----------------------------------------------------
         match_phrase_svc = 'http://34.73.227.230:8000/match_phrase/'    
         match_phrase_url = match_phrase_svc + var_name + '/'
- 
+        print('Working...')
+        
         #-----------------------------------------------------------------       
         # The result is in JSON format, for example:
         # result = { "results": [
@@ -826,7 +827,8 @@ class balto_gui:
         # {"IRI":"result2_IRI", "label":"result2_label", "matchrank": "result2_rank"} ] }
         #------------------------------------------------------------------        
         result = requests.get( match_phrase_url )
-        ## json_data = result.text
+        print('Finished.')
+        print()
         json_str = result.text
         # print( json_str )
 
