@@ -40,8 +40,30 @@ import time      # for sleep
 #      get_map_bounds()
 #      replace_map_bounds()
 #      replace_map_bounds2()
-#      get_start_date()
+#      get_start_datetime()
+#      get_end_datetime()
+#      get_variable_name()
+#      get_opendap_package()
+#      get_download_format()
 #      pix_str()
+#      list_to_string()   # for multi-line messages
+#      get_url_dir_filenames()
+#      update_filename_list()
+#      get_opendap_file_url()
+#      open_dataset()
+#      show_dataset_info()
+#      show_var_info()
+#      get_all_var_shortnames()
+#      get_all_var_longnames()
+#      get_all_var_units()
+#      get_var_longname()
+#      get_var_units()
+#      get_var_shape()
+#      get_var_dimensions()
+#      get_var_dtype()
+#      get_var_attributes()
+#      print_choices()
+#      download_data()
 #
 #------------------------------------------------------------------------
 class balto_gui:
@@ -61,6 +83,9 @@ class balto_gui:
         ## self.date_width_px = '270px'  # (before adding label)
         self.url_box_width_px = self.att_width_px
         ## self.url_box_width_px = '560px'
+        self.log_box_width_px  = self.att_width_px
+        ## self.log_box_width_px  = '560px'
+        self.log_box_height_px = '160px' 
          #-------------------------------------------------       
         ## map_width = (self.gui_width - 40)
         self.map_width_px  = '640px'   # (gui_width - 40px)\n",
@@ -87,9 +112,8 @@ class balto_gui:
     #   show_gui()
     #--------------------------------------------------------------------
     def make_gui(self):
-    
-        # gui_width_px = self.pix_str( self.gui_width )
-        gui_width_px = '680px'
+
+        gui_width_px = self.gui_width_px
         
         self.make_data_panel()
         self.make_map_panel()
@@ -179,11 +203,6 @@ class balto_gui:
         #-----------------
         # Event handlers
         #-----------------------------------------------------
-        # Note: Method functions have type "method" instead
-        #       of "function" and therefore can't be passed
-        #       directly to widget handlers like "on_click".
-        #       But we can use the "__func__" attribute.
-        #-----------------------------------------------------
         # Note: NEED to set names='value' here.  If names
         #       keyword is omitted, only works intermittently.
         #------------------------------------------------------------
@@ -195,10 +214,17 @@ class balto_gui:
         o2.observe( self.show_dataset_info, names=['options','value'] )
         o3.observe( self.show_var_info, names=['options', 'value'] )
         ## o3.observe( self.show_var_info, names='value' )
-
         ## o2.observe( self.show_dataset_info, names='All' )
         ## o3.observe( self.show_var_info, names='All' )
-                
+ 
+         #-----------------------------------------------------    
+        # It turned out this wasn't an issue.
+        #-----------------------------------------------------
+        # Note: Method functions have type "method" instead
+        #       of "function" and therefore can't be passed
+        #       directly to widget handlers like "on_click".
+        #       But we can use the "__func__" attribute.
+        #-----------------------------------------------------           
 #         b1.on_click( self.update_filename_list.__func__ )
 #         o2.observe( self.show_dataset_info.__func__ )
 #         o3.observe( self.show_var_info.__func__, names='value' )
@@ -347,11 +373,11 @@ class balto_gui:
 #         status = widgets.Text(description=' Status:', style=self.style3,
 #                               layout=Layout(width='380px') )
        
-        # log_width_px  = '560px'
-        # log_height_px = '160px'                       
+        width_px  = self.log_box_width_px
+        height_px = self.log_box_height_px                       
         log = widgets.Textarea( description='', value='',
                       disabled=False, style=self.style0,
-                      layout=Layout(width='560px', height='160px')) 
+                      layout=Layout(width=width_px, height=height_px)) 
  
         ## panel = widgets.VBox([h3, status, log]) 
         panel = widgets.VBox([h3, log])
@@ -443,35 +469,36 @@ class balto_gui:
 #         #   print( event )
 #
     #--------------------------------------------------------------------
-    def get_start_date(self):
+    def get_start_datetime(self):
 
-        d1 = self.dates.start_date_box    
-        if (d1.value is not None):
-            return str(d1.value)    # Need the str().
-        else:
-            return 'None'
+        # Need the str()
+        d1 = self.datetime_start_date_box
+        d3 = self.datetime_start_time_box    
+        s1 = str(d1.value) if (d1.value is not None) else 'None'
+        s2 = str(d3.value) if (d3.value is not None) else 'None'
+        return (s1, s2)
 
     #--------------------------------------------------------------------
-    def get_end_date(self):
+    def get_end_datetime(self):
 
-        d2 = self.dates.end_date_box 
-        if (d2.value is not None):
-            return str(d2.value)   # Need the str().
-        else:
-            return 'None'
+        d2 = self.datetime_end_date_box 
+        d4 = self.datetime_end_time_box
+        s1 = str(d2.value) if (d2.value is not None) else 'None'
+        s2 = str(d4.value) if (d4.value is not None) else 'None'
+        return (s1, s2)
 
     #--------------------------------------------------------------------
     def get_variable_name(self):
 
-        return self.data.var_name_box.value
+        return self.data_var_name.value
 
     #--------------------------------------------------------------------
     def get_opendap_package(self):
     
-        return self.prefs.package.value
+        return self.prefs_package.value
 
     #--------------------------------------------------------------------
-    def get_output_format(self):
+    def get_download_format(self):
     
         return self.download_format.value
 
@@ -688,16 +715,6 @@ class balto_gui:
 
     #   get_all_var_units()
     #--------------------------------------------------------------------
-    def get_var_dimensions( self, short_name ):
-    
-        var = self.dataset[ short_name ]
-        if hasattr(var, 'dimensions'):
-            return str(var.dimensions)
-        else:
-            return 'No dimensions found.'
-
-    #   get_var_dimensions()
-    #--------------------------------------------------------------------
     def get_var_longname( self, short_name ):
 
         var = self.dataset[ short_name ]
@@ -724,6 +741,16 @@ class balto_gui:
         return str(var.shape)
 
     #   get_var_shape()
+    #--------------------------------------------------------------------
+    def get_var_dimensions( self, short_name ):
+    
+        var = self.dataset[ short_name ]
+        if hasattr(var, 'dimensions'):
+            return str(var.dimensions)
+        else:
+            return 'No dimensions found.'
+
+    #   get_var_dimensions()
     #--------------------------------------------------------------------
     def get_var_dtype( self, short_name ):
 
@@ -782,26 +809,38 @@ class balto_gui:
     #--------------------------------------------------------------------   
     def print_choices(self):
 
+        (start_date, start_time) = self.get_start_datetime()
+        (end_date, end_time)     = self.get_end_datetime()
+        
         msg = [
+        'download format = ' + self.get_download_format(),
         'bounds = ' + str(self.get_map_bounds()),
         'opendap package = ' + self.get_opendap_package(),
-        'start date = ' + self.get_start_date(),
-        'end date = ' + self.get_end_date(),
+        'start date = ' + start_date,
+        'start time = ' + start_time,
+        'end date = ' + end_date,
+        'end time = ' + end_time,
         'variable = ' + self.get_variable_name() ]
 
         #------------------------------------------        
         # Show message in downloads panel log box
         #------------------------------------------
         msg_str = self.list_to_string( msg )
-        self.downloads.log_box.value = msg_str
+        self.download_log_box.value = msg_str
 
     #   print_choices()
     #--------------------------------------------------------------------
-    def download_data(self):
+    def download_data(self, caller_obj=None):
 
-        log_win = self.download_log_win
+        #----------------------------------------------------
+        # Note: This is called by the "on_click" method of
+        # the "Go" button beside the Dropdown of filenames.
+        # In this case, type(caller_obj) =
+        # <class 'ipywidgets.widgets.widget_button.Button'>
+        #----------------------------------------------------
+        log_box = self.download_log_box
         ## status  = self.download_status_box
-        log_win.value = 'Download button clicked.'
+        log_box.value = 'Download button clicked.'
         self.print_choices()
 
         #-----------------------------------
