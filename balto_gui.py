@@ -23,6 +23,7 @@ from IPython.display import display, HTML
 import pydap.client   # (for open_url, etc.)
 import requests   # for get_filenames()
 import time      # for sleep
+import json
 
 #------------------------------------------------------------------------
 #
@@ -62,6 +63,7 @@ import time      # for sleep
 #      get_var_dimensions()
 #      get_var_dtype()
 #      get_var_attributes()
+#      get_possible_svo_names()
 #      print_choices()
 #      download_data()
 #
@@ -70,6 +72,7 @@ class balto_gui:
     #--------------------------------------------------------------------
     def __init__(self):
 
+        self.version = '0.5'
         self.server_url_dir = 'http://test.opendap.org/dap/data/nc/'
         #---------------------------------        
         self.gui_width = 680  # number
@@ -803,6 +806,50 @@ class balto_gui:
             return 'No attributes found.'
     
     #   get_var_attributes()
+    #--------------------------------------------------------------------
+    def get_possible_svo_names(self, var_name):
+
+        #-----------------------------------------------------      
+        # Use the SVO "match phrase" service to get a
+        # ranked list of possible SVO variable name matches.
+        #-----------------------------------------------------
+        # var_name should be a list of words, as a single
+        # string, separated by underscores.
+        #-----------------------------------------------------
+        match_phrase_svc = 'http://34.73.227.230:8000/match_phrase/'    
+        match_phrase_url = match_phrase_svc + var_name + '/'
+ 
+         #-----------------------------------------------------------------       
+        # The result is in JSON format, for example:
+        # result = { "results": [
+        # {"IRI":"result1_IRI", "label":"result1_label", "matchrank": "result1_rank"},
+        # {"IRI":"result2_IRI", "label":"result2_label", "matchrank": "result2_rank"} ] }
+        #------------------------------------------------------------------        
+        result = requests.get( match_phrase_url )
+        ## json_data = result.text
+        json_str = result.text
+        # print( json_str )
+
+        json_data  = json.loads( json_str )
+        match_list = json_data['results']
+        
+        for item in match_list:
+            print('item  =', item)
+            print('IRI   =', item['IRI'])
+            print('label =', item['label'])
+            print('rank  =', item['matchrank'])
+            print()
+ 
+        # This simple test works fine
+#         import json
+#         json_str = '{"results":[{"a":"this", "b":"that"}, {"a":"dog", "b":"cat"}]}'
+#         json_data = json.loads( json_str )
+#         for item in json_data['results']:
+#             print('a =', item['a'])
+#             print('b =', item['b'])
+    
+     
+    #   get_possible_svo_names()
     #--------------------------------------------------------------------
     #--------------------------------------------------------------------   
     def print_choices(self):
