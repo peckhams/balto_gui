@@ -1,9 +1,9 @@
 # balto_gui
 Interactive GUI for BALTO in a Jupyter notebook
 
-This project creates a GUI (graphical user interface) for the BALTO (Brokered Alignment of Long-Tail Observations) project. BALTO is funded by the NSF EarthCube program. The GUI intends to provide a simplified and customizable method for users to access data sets of interest on servers that support the OpenDAP data access protocol. This interactive GUI runs within a Jupyter notebook and uses the Python packages: ipywidgets and ipyleaflet.
+This respository creates a GUI (graphical user interface) for the BALTO (Brokered Alignment of Long-Tail Observations) project. BALTO is funded by the NSF EarthCube program. The GUI aims to provide a simplified and customizable method for users to access data sets of interest on servers that support the OpenDAP data access protocol. This interactive GUI runs within a Jupyter notebook and uses the Python packages: <b>ipywidgets</b>, <b>ipyleaflet</b> and <b>pydap</b>.
 
-The Python source code to create the GUI and to process events is in a module called <b>balto_gui.py</b> that should be copied into the same directory as this Jupyter notebook.
+The Python source code to create the GUI and to process events is in a module called <b>balto_gui.py</b> that must be found in the same directory as this Jupyter notebook.
 
 This is an accordion-style GUI, which allows you to switch between GUI panels without scrolling in the notebook.
 
