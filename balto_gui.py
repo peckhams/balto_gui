@@ -834,7 +834,7 @@ class balto_gui:
         match_list = json_data['results']
         
         for item in match_list:
-            print('item  =', item)
+            ## print('item  =', item)
             print('IRI   =', item['IRI'])
             print('label =', item['label'])
             print('rank  =', item['matchrank'])
