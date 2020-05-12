@@ -807,7 +807,7 @@ class balto_gui:
     
     #   get_var_attributes()
     #--------------------------------------------------------------------
-    def get_possible_svo_names(self, var_name):
+    def get_possible_svo_names(self, var_name, SHOW_IRI=False):
 
         #-----------------------------------------------------      
         # Use the SVO "match phrase" service to get a
@@ -819,7 +819,7 @@ class balto_gui:
         match_phrase_svc = 'http://34.73.227.230:8000/match_phrase/'    
         match_phrase_url = match_phrase_svc + var_name + '/'
  
-         #-----------------------------------------------------------------       
+        #-----------------------------------------------------------------       
         # The result is in JSON format, for example:
         # result = { "results": [
         # {"IRI":"result1_IRI", "label":"result1_label", "matchrank": "result1_rank"},
@@ -835,20 +835,12 @@ class balto_gui:
         
         for item in match_list:
             ## print('item  =', item)
-            print('IRI   =', item['IRI'])
+            if (SHOW_IRI):
+                print('IRI   =', item['IRI'])
             print('label =', item['label'])
             print('rank  =', item['matchrank'])
             print()
- 
-        # This simple test works fine
-#         import json
-#         json_str = '{"results":[{"a":"this", "b":"that"}, {"a":"dog", "b":"cat"}]}'
-#         json_data = json.loads( json_str )
-#         for item in json_data['results']:
-#             print('a =', item['a'])
-#             print('b =', item['b'])
     
-     
     #   get_possible_svo_names()
     #--------------------------------------------------------------------
     #--------------------------------------------------------------------   
