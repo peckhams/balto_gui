@@ -83,11 +83,11 @@ class balto_gui:
         #---------------------------------------------------
         self.url_box_width_px = self.att_width_px                       
         self.date_width_px = '240px'
-        self.time_width_px = '200px'
-        self.hint_width_px = '90px'
+        self.time_width_px = '180px'
+        self.hint_width_px = '120px'
         #---------------------------------------------------
         self.log_box_width_px = self.att_width_px
-        self.log_box_height_px = '160px'
+        self.log_box_height_px = '200px'
         #---------------------------------------------------          
         self.style0     = {'description_width': 'initial'}
         self.style1     = {'description_width': '130px'}
@@ -309,7 +309,8 @@ class balto_gui:
         self.map_maxlat_box = w3
         self.map_minlat_box = w4
         self.map_panel      = panel
-        
+        ## self.map_bounds     = (-180, -90, 180, 90)
+                
     #   make_map_panel()
     #--------------------------------------------------------------------  
     def make_datetime_panel(self):
@@ -333,18 +334,20 @@ class balto_gui:
         d4 = widgets.Text( description='End Time:',
                     disabled=False, style=time_style,
                     layout=Layout(width=time_width_px) )
-        ## d5 = widgets.Label( description=' 00:00:00',
-        d5 = widgets.Label( ' 00:00:00',
+        d3.value = '00:00:00'
+        d4.value = '00:00:00'
+        #---------------------------------------------------
+        d5 = widgets.Label( '  (hh:mm:ss, 24-hr)',
                      layout=Layout(width=hint_width_px) )
-                     #disabled=False, style=hint_style )
-        ## d6 = widgets.Label( description=' 00:00:00',
-        d6 = widgets.Label( ' 00:00:00',
+                     ## disabled=False, style=hint_style )
+        d6 = widgets.Label( '  (hh:mm:ss, 24-hr)',
                      layout=Layout(width=hint_width_px) )
-                     #disabled=False, style=hint_style )
+                     ## disabled=False, style=hint_style )
 
                                         
         dates = widgets.VBox([d1, d2])
         times = widgets.VBox([d3, d4])
+        # panel = widgets.HBox([dates, times])
         hints = widgets.VBox([d5, d6])
         panel = widgets.HBox([dates, times, hints])
                    
@@ -469,20 +472,21 @@ class balto_gui:
     #--------------------------------------------------------------------
     def get_start_datetime(self):
 
-        # Need the str()
+        # Need the str() here
         d1 = self.datetime_start_date_box
         d3 = self.datetime_start_time_box    
-        s1 = str(d1.value) if (d1.value is not None) else 'None'
-        s2 = str(d3.value) if (d3.value is not None) else 'None'
+        s1 = str(d1.value) if (d1.value is not None) else 'Not set'
+        s2 = str(d3.value) if (d3.value is not None) else 'Not set'
         return (s1, s2)
 
     #--------------------------------------------------------------------
     def get_end_datetime(self):
 
+        # Need the str() here
         d2 = self.datetime_end_date_box 
         d4 = self.datetime_end_time_box
-        s1 = str(d2.value) if (d2.value is not None) else 'None'
-        s2 = str(d4.value) if (d4.value is not None) else 'None'
+        s1 = str(d2.value) if (d2.value is not None) else 'Not set'
+        s2 = str(d4.value) if (d4.value is not None) else 'Not set'
         return (s1, s2)
 
     #--------------------------------------------------------------------
@@ -808,7 +812,8 @@ class balto_gui:
         
         msg = [
         'download format = ' + self.get_download_format(),
-        'bounds = ' + str(self.get_map_bounds()),
+        'bounds = ' + str(self.get_map_bounds( FROM_MAP=False )),
+        ## 'bounds = ' + str(self.get_map_bounds()),
         'opendap package = ' + self.get_opendap_package(),
         'start date = ' + start_date,
         'start time = ' + start_time,
