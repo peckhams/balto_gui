@@ -74,27 +74,25 @@ class balto_gui:
         #---------------------------------        
         self.gui_width = 680  # number
         self.att_width = 560  # number
-        #---------------------------------
-        self.gui_width_px  = '680px'
-        self.att_width_px  = '560px'
+        self.map_width = (self.gui_width - 40)
+        #---------------------------------------------------
+        self.gui_width_px  = self.pix_str( self.gui_width )
+        self.map_width_px  = self.pix_str( self.map_width )
+        self.map_height_px = '250px'
+        self.att_width_px  = self.pix_str( self.att_width )
+        #---------------------------------------------------
+        self.url_box_width_px = self.att_width_px                       
         self.date_width_px = '240px'
         self.time_width_px = '200px'
         self.hint_width_px = '90px'
-        ## self.date_width_px = '270px'  # (before adding label)
-        self.url_box_width_px = self.att_width_px
-        ## self.url_box_width_px = '560px'
-        self.log_box_width_px  = self.att_width_px
-        ## self.log_box_width_px  = '560px'
-        self.log_box_height_px = '160px' 
-         #-------------------------------------------------       
-        ## map_width = (self.gui_width - 40)
-        self.map_width_px  = '640px'   # (gui_width - 40px)\n",
-        self.map_height_px = '250px'
-        #-------------------------------------------------
-        self.style0  = {'description_width': 'initial'}
-        self.style1  = {'description_width': '130px'}
-        self.style2  = {'description_width': '80px'}
-        self.style3  = {'description_width': '50px'}
+        #---------------------------------------------------
+        self.log_box_width_px = self.att_width_px
+        self.log_box_height_px = '160px'
+        #---------------------------------------------------          
+        self.style0     = {'description_width': 'initial'}
+        self.style1     = {'description_width': '130px'}
+        self.style2     = {'description_width': '80px'}
+        self.style3     = {'description_width': '50px'}
         self.date_style = {'description_width': '70px'}
         self.time_style = {'description_width': '70px'}
 
@@ -678,8 +676,6 @@ class balto_gui:
 
         if not(hasattr(self, 'var_short_names')):
             self.get_all_var_shortnames()
-            ## print('ERROR: Call get_all_var_shortnames() first.')
-            ## return
    
         long_names = list()
         for name in self.var_short_names:
@@ -699,8 +695,6 @@ class balto_gui:
 
         if not(hasattr(self, 'var_short_names')):
             self.get_all_var_shortnames()
-            ## print('ERROR: Call get_all_var_shortnames() first.')
-            ## return
                
         units_names = list()
         for name in self.var_short_names:
