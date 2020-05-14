@@ -12,7 +12,7 @@ included in the same directory as the Jupyter notebook.
 #
 #------------------------------------------------------------------------
 
-from ipyleaflet import Map
+from ipyleaflet import Map, basemaps
 import ipywidgets as widgets
 from ipywidgets import Layout
 from IPython.display import display, HTML
@@ -424,13 +424,23 @@ class balto_gui:
         map_height_px = self.map_height_px
         btn_width_px  = self.pix_str( self.button_width )
         #--------------------------------------------------
+        bm_style   = {'description_width': '70px'}
         bbox_style = {'description_width': '100px'}
         bbox_width_px = '260px'
  
+        #---------------------
+        # Choose the basemap
+        #---------------------
+        options = self.get_basemap_list()
+        bm = widgets.Dropdown( description='Base map:',
+                               options=options, value=options[0],
+                               disabled=False, style=bm_style,
+                               layout=Layout(width='400px') )
+        
         #---------------------------------------        
         # Create the map width with ipyleaflet
         #---------------------------------------                
-        m = Map(center=(0.0, 0.0), zoom=1, 
+        m = Map(center=(0.0, 0.0), zoom=1,
                 layout=Layout(width=map_width_px, height=map_height_px))
 
         #-----------------------------------------------------
@@ -478,8 +488,9 @@ class balto_gui:
         pads  = widgets.VBox([pd, pd])
         btns  = widgets.VBox([b1, b2])
         bbox  = widgets.HBox( [lons, lats, pads, btns])
-        panel = widgets.VBox( [m, bbox] )
+        panel = widgets.VBox( [bm, m, bbox] )
         
+        self.map_basemap    = bm
         self.map_window     = m
         self.map_minlon_box = w1
         self.map_maxlon_box = w2
@@ -491,11 +502,52 @@ class balto_gui:
         #-----------------     
         # Event handlers
         #-----------------
+        bm.observe( self.change_base_map, names=['options','value'] )
         m.on_interaction( self.replace_map_bounds )
         b1.on_click( self.update_map_view )
         b2.on_click( self.reset_map_panel )
                                    
     #   make_map_panel()
+    #-------------------------------------------------------------------- 
+    def get_basemap_list(self):
+ 
+        basemap_list = [
+        'OpenStreetMap.Mapnik', 'OpenStreetMap.HOT', 'OpenTopoMap',
+        'Esri.WorldStreetMap', 'Esri.DeLorme', 'Esri.WorldTopoMap',
+        'Esri.WorldImagery', 'Esri.NatGeoWorldMap',
+        'NASAGIBS.ModisTerraTrueColorCR', 'NASAGIBS.ModisTerraBands367CR',
+        'NASAGIBS.ModisTerraBands721CR',  'NASAGIBS.ModisAquaTrueColorCR',
+        'NASAGIBS.ModisAquaBands721CR',   'NASAGIBS.ViirsTrueColorCR',
+        'NASAGIBS.ViirsEarthAtNight2012',
+        'Strava.All', 'Strava.Ride', 'Strava.Run', 'Strava.Water',
+        'Strava.Winter', 'Stamen.Terrain', 'Stamen.Toner',
+        'Stamen.Watercolor' ]
+        #---------------------------------        
+        # 'HikeBike.HikeBike', 'MtbMap'
+        # 'OpenStreetMap.BlackAndWhite',
+        # 'OpenStreetMap.France',
+        #----------------------------------
+        return basemap_list
+          
+    #   get_basemap_list()
+    #--------------------------------------------------------------------  
+    def change_base_map(self, caller_obj=None):
+
+        #--------------------------------------------------------       
+        # Cannot directly change the basemap for some reason.
+        # self.map_window.basemap = basemaps.Esri.WorldStreetMap
+        # Need to call clear_layers(), then add_layer().
+        #---------------------------------------------------------
+        map_choice = self.map_basemap.value
+        self.map_window.clear_layers()
+        basemap_layer = eval( 'basemaps.' + map_choice )
+        self.map_window.add_layer( basemap_layer )
+ 
+        # For testing
+        # print('map_choice =', map_choice)
+        # print('Changed the basemap.')
+         
+    #   change_base_map()
     #--------------------------------------------------------------------  
     def update_map_view(self, caller_obj=None):
     
