@@ -894,7 +894,8 @@ class balto_gui:
         if hasattr(var, 'long_name'):
             return var.long_name
         else:
-            return short_name
+            return 'Long name not found.'
+            ## return short_name
 
     #   get_var_longname()
     #--------------------------------------------------------------------
