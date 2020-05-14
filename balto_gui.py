@@ -35,7 +35,6 @@ import json
 #      make_data_panel_v0()
 #      make_data_panel()
 #      reset_data_panel()
-#      make_var_panel()
 #      make_map_panel()
 #      make_dates_panel()
 #      make_download_panel()
@@ -423,14 +422,16 @@ class balto_gui:
 
         map_width_px  = self.map_width_px
         map_height_px = self.map_height_px
+        btn_width_px  = self.pix_str( self.button_width )
+        #--------------------------------------------------
+        bbox_style = {'description_width': '100px'}
+        bbox_width_px = '260px'
+ 
+        #---------------------------------------        
+        # Create the map width with ipyleaflet
+        #---------------------------------------                
         m = Map(center=(0.0, 0.0), zoom=1, 
                 layout=Layout(width=map_width_px, height=map_height_px))
-        m.on_interaction( self.replace_map_bounds )
-        #-----------------------------------------------------
-        
-        # bbox_style = {'description_width': '130px'}
-        bbox_style = {'description_width': '100px'}
-        bbox_width_px = '270px'
 
         #-----------------------------------------------------
         # Does "step=0.01" restrict accuracy of selection ??
@@ -462,10 +463,21 @@ class balto_gui:
             description='South edge lat:',
             disabled=False, style=bbox_style,
             layout=Layout(width=bbox_width_px) )
-    
+ 
+        pd = widgets.HTML(('&nbsp;' * 2))  # for padding
+        b1 = widgets.Button(description="Update",
+                            layout=Layout(width=btn_width_px))
+        b2 = widgets.Button(description="Reset",
+                            layout=Layout(width=btn_width_px))
+
+        #-----------------------------------   
+        # Arrange the widgets in the panel
+        #-----------------------------------
         lons  = widgets.VBox([w1, w2])
         lats  = widgets.VBox([w3, w4])
-        bbox  = widgets.HBox( [lons, lats])
+        pads  = widgets.VBox([pd, pd])
+        btns  = widgets.VBox([b1, b2])
+        bbox  = widgets.HBox( [lons, lats, pads, btns])
         panel = widgets.VBox( [m, bbox] )
         
         self.map_window     = m
@@ -475,8 +487,32 @@ class balto_gui:
         self.map_minlat_box = w4
         self.map_panel      = panel
         ## self.map_bounds     = (-180, -90, 180, 90)
-                
+
+        #-----------------     
+        # Event handlers
+        #-----------------
+        m.on_interaction( self.replace_map_bounds )
+        b1.on_click( self.update_map_view )
+        b2.on_click( self.reset_map_panel )
+                                   
     #   make_map_panel()
+    #--------------------------------------------------------------------  
+    def update_map_view(self, caller_obj=None):
+    
+        pass
+
+    #   update_map_view()
+    #--------------------------------------------------------------------  
+    def reset_map_panel(self, caller_obj=None):
+    
+        self.map_window.center = (0.0, 0.0)
+        self.map_window.zoom = 1
+        self.map_minlon_box.value = '-180.0'
+        self.map_maxlon_box.value = '180.0'
+        self.map_minlat_box.value = '-90.0'
+        self.map_maxlat_box.value = '90.0'
+    
+    #   reset_map_panel()
     #--------------------------------------------------------------------  
     def make_datetime_panel(self):
 
