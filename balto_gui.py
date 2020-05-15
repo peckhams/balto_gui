@@ -12,7 +12,7 @@ included in the same directory as the Jupyter notebook.
 #
 #------------------------------------------------------------------------
 
-from ipyleaflet import Map, basemaps, FullScreenControl
+from ipyleaflet import Map, basemaps, FullScreenControl, Rectangle
 from traitlets import Tuple
 ## import ipyleaflet as ipyl
 
@@ -22,12 +22,10 @@ from IPython.display import display, HTML
 ## from IPython.core.display import display
 ## from IPython.lib.display import display
 
-# import pydap
-import pydap.client   # (for open_url, etc.)
-import requests   # for get_filenames()
+import pydap.client  # (for open_url, etc.)
+import requests      # (used by get_filenames() )
 import json
-
-## import time  # (for sleep)
+import datetime      # (used by get_duration() )
 
 # import balto_plot as bp
 
@@ -48,7 +46,8 @@ import json
 #      get_map_bounds()
 #      replace_map_bounds()
 #      replace_map_bounds2()
-#      zoom_out_to_new_bounds()    #######
+#      update_map_bounds()
+#      zoom_out_to_new_bounds()
 #      get_start_datetime()
 #      get_end_datetime()
 #      get_variable_name()
@@ -79,6 +78,13 @@ import json
 #      print_choices()
 #      download_data()
 #      show_grid()
+#      -------------------------------
+#      update_datetime_panel()
+#      split_datetime_str()
+#      split_date_str()
+#      split_time_str()
+#      get_datetime_from_days_since()
+#      get_duration()
 #
 #------------------------------
 # Example GES DISC opendap URL
@@ -363,7 +369,7 @@ class balto_gui:
         self.data_url_dir   = o1   # on an OpenDAP server
         self.data_filename  = o2
         self.data_var_long_name = oL
-        self.data_var_name  = o3
+        self.data_var_name  = o3     # short_name
         self.data_var_units = o4
         self.data_var_dims  = o5
         self.data_var_shape = o6
@@ -415,7 +421,7 @@ class balto_gui:
         if not(KEEP_DIR):
             self.data_url_dir.value = self.default_url_dir
         self.data_filename.options    = ['']
-        self.data_var_name.options    = ['']
+        self.data_var_name.options    = ['']  # short names
         self.data_var_long_name.value = ''
         self.data_var_units.value     = ''
         self.data_var_shape.value     = ''
@@ -516,7 +522,6 @@ class balto_gui:
         m.on_interaction( self.replace_map_bounds )
         m.observe( self.zoom_out_to_new_bounds, 'bounds' )
         b1.on_click( self.update_map_bounds )
-        ## b1.on_click( self.zoom_out_to_new_bounds )
         b2.on_click( self.reset_map_panel )
                                    
     #   make_map_panel()
@@ -580,6 +585,7 @@ class balto_gui:
     #--------------------------------------------------------------------  
     def make_datetime_panel(self):
 
+        full_box_width_px = self.pix_str( self.full_box_width )
         date_width_px = self.date_width_px
         time_width_px = self.time_width_px
         hint_width_px = self.hint_width_px
@@ -614,20 +620,27 @@ class balto_gui:
                      layout=Layout(width=hint_width_px) )
                      ## layout=Layout(width=hint_width_px, margin=margin) )
                      ## disabled=False, style=hint_style )
-
-                                        
+#         d7 = widgets.Text( description='Notes:',
+#                      disabled=False, style=self.date_style,
+#                      layout=Layout(width=full_box_width_px) )                      
+        d7 = widgets.Textarea( description='Notes:', value='',
+                     disabled=False, style=self.date_style,
+                     layout=Layout(width=full_box_width_px, height='80px')) 
+                                                             
         dates = widgets.VBox([d1, d2])
         times = widgets.VBox([d3, d4])
-        # panel = widgets.HBox([dates, times])
         hints = widgets.VBox([d5, d6])
         pad   = widgets.VBox([pp, pp])
-        panel = widgets.HBox([dates, times, pad, hints])
+        top   = widgets.HBox([dates, times, pad, hints])
+        panel = widgets.VBox([top, d7])
+        ## panel = widgets.VBox([top, pp, d7])
                    
-        self.datetime_start_date_box = d1
-        self.datetime_start_time_box = d3
-        self.datetime_end_date_box   = d2
-        self.datetime_end_time_box   = d4
-        self.datetime_panel          = panel
+        self.datetime_start_date = d1
+        self.datetime_start_time = d3
+        self.datetime_end_date   = d2
+        self.datetime_end_time   = d4
+        self.datetime_notes      = d7
+        self.datetime_panel      = panel
 
     #   make_datetime_panel()
     #-------------------------------------------------------------------- 
@@ -772,21 +785,32 @@ class balto_gui:
         new_bounds = ((bb_minlat, bb_minlon), (bb_maxlat, bb_maxlon))
         self.map_window.new_bounds = Tuple()
         self.map_window.new_bounds = new_bounds 
-    
+
     #   update_map_bounds()
     #--------------------------------------------------------------------
     def zoom_out_to_new_bounds(self, change=None):
-        # the change owner is the widget triggering the handler, in this case a Map
+        # change owner is the widget that triggers the handler
         m = change.owner
 
-        # if we're not zoomed all the way out already, and we have a target...
+        #-----------------------------------------
+        # If not zoomed all the way out already,
+        # and we have a target bounding box
+        #-----------------------------------------
         if (m.zoom > 1 and m.new_bounds):
             b = m.new_bounds
             n = change.new
             if (n[0][0] < b[0][0] and n[0][1] < b[0][1] and
                 n[1][0] > b[1][0] and n[1][1] > b[1][1]):
-                # bounds are already large enough, so remove the target
-                m.new_bounds = None
+                #---------------------------------------
+                # new_bounds are now within map window
+                # Show bounding box as a rectangle ?
+                # weight = line/stroke thickness
+                #---------------------------------------
+#                 rectangle = Rectangle( bounds=b, fill=False, weight=4)
+#                             ## fill_opacity=0.0, \ fill_color="#0033FF" )
+#                 m.add_layer(rectangle)
+                #-----------------------
+                m.new_bounds = None  # (remove target)
             else:
                 # zoom out
                 m.zoom = m.zoom - 1
@@ -863,7 +887,7 @@ class balto_gui:
         return (s1, s2)
 
     #--------------------------------------------------------------------
-    def get_variable_name(self):
+    def get_variable_short_name(self):
 
         return self.data_var_name.value
 
@@ -993,9 +1017,11 @@ class balto_gui:
         
         #-------------------------------------------
         # Update variable list and selected value.
-        #-------------------------------------------    
-        self.data_var_name.options = long_names
-        self.data_var_name.value   = long_names[0]
+        #-------------------------------------------
+        self.data_var_name.options = short_names
+        self.data_var_name.value   = short_names[0]    
+#         self.data_var_name.options = long_names
+#         self.data_var_name.value   = long_names[0]
 
         #------------------------------------
         # Show other info for this variable
@@ -1014,19 +1040,16 @@ class balto_gui:
         #       The type of "change" is:
         #       <class 'traitlets.utils.bunch.Bunch'>
         #-------------------------------------------------------
-        var_name = self.data_var_name.value
-        if (var_name == ''):
+        short_name = self.data_var_name.value
+        if (short_name == ''):
             return
- 
+         
         #-----------------------------------------------      
         # Maybe later wrap this block in "try, except"
         #-----------------------------------------------
         # Note: long_name is selected from Dropdown.  
         # var = dataset[ short_name ]
         #----------------------------------------------  
-        short_name = self.short_name_map[ var_name ]
-        # print('#### short_name =', short_name)
-        #----------------------------------------------
         long_name = self.get_var_longname( short_name )
         units = self.get_var_units( short_name )
         shape = self.get_var_shape( short_name )
@@ -1041,6 +1064,11 @@ class balto_gui:
         self.data_var_type.value      = dtype
         self.data_var_atts.options    = atts
 
+        #-------------------------------------------
+        # Try to show date range in datetime panel
+        #-------------------------------------------
+        self.update_datetime_panel()
+        
     #   show_var_info()
     #--------------------------------------------------------------------  
     def get_all_var_shortnames(self):
@@ -1186,6 +1214,7 @@ class balto_gui:
         if hasattr(var, 'attributes'):
             #----------------------------------------
             # Convert dictionary to list of strings
+            # to be displayed in a droplist.
             #----------------------------------------
             att_list = []
             for key, val in var.attributes.items():
@@ -1268,7 +1297,7 @@ class balto_gui:
         (end_date, end_time)     = self.get_end_datetime()
         
         msg = [
-        'variable = ' + self.get_variable_name(),
+        'var short name  = ' + self.get_variable_short_name(),
         'download format = ' + self.get_download_format(),
         'map bounds = ' + str(self.get_map_bounds( FROM_MAP=False )),
         ## 'bounds = ' + str(self.get_map_bounds()),
@@ -1329,9 +1358,9 @@ class balto_gui:
         # Actually download the data here
         # to a variable in the notebook
         #-----------------------------------      
-        long_name = self.data_var_name.value
+        short_name = self.data_var_name.value
         print()
-        print('Downloading variable:', long_name, '...' )
+        print('Downloading variable:', short_name, '...' )
         # Asynchronous download. How do we know its here?
         print('Variable saved in: balto.user_var')
         
@@ -1340,7 +1369,7 @@ class balto_gui:
         # which causes it to be downloaded, and then
         # store it into balto.user_var.
         #---------------------------------------------
-        data_ref  = self.dataset[ long_name ]
+        data_ref  = self.dataset[ short_name ]
         data_dims = data_ref.dimensions
         ndim      = len( data_dims )
         var = data_ref.array[:].data  ## (all indices of data)
@@ -1379,5 +1408,210 @@ class balto_gui:
                         cmap='rainbow', xsize=xsize, ysize=ysize )
                         ## stretch='hist_equal')
                         ## NO_SHOW=False, im_file=None,
+
+    #   show_grid()
     #--------------------------------------------------------------------
+    def update_datetime_panel(self):
+ 
+        ## short_names = self.dataset.keys()
+        info = []   
+        short_names = self.var_short_names
+        if ('time' in short_names):
+            self.time_obj = self.dataset.time
+            self.time_var = self.time_obj.data[:]
+        elif ('TIME' in short_names):
+            self.time_obj = self.dataset.TIME
+            self.time_var = self.time_obj.data[:]
+        else:
+            msg = 'Unable to find times for this dataset.'
+            self.datetime_notes.value = msg
+            return
+        #----------------------------------------------------
+        # Use min and max times, vs. "actual_range" ??
+        min_time = self.time_var.min()
+        max_time = self.time_var.max()
+        self.time_range = [min_time, max_time]
+        msg = 'Time range for this dataset = '
+        msg += '(' + str(min_time) + ', ' + str(max_time) + ')'
+        info.append( msg )
+        #----------------------------------------------------        
+        if (hasattr(self.time_obj, 'actual_range')):
+            range_str = str( self.time_obj.actual_range )
+            msg = 'Time "actual_range" is: ' + range_str
+            info.append( msg )
+            ### self.time_range = self.time_obj.actual_range
+        else:
+            msg = 'Unable to find "actual range" for times.'
+            self.datetime_notes.value = msg
+            return
+        #----------------------------------------------------
+        if (hasattr(self.time_obj, 'units')):
+            self.time_units = self.time_obj.units
+            msg = 'Time "units" are: ' + self.time_units
+            info.append( msg )
+        else:
+            msg = 'Unable to find "units" for times.'
+            self.datetime_notes.value = msg
+            return
+        #----------------------------------------------------
+        s = self.time_units
+        if (s.startswith('days since ')):
+            n = len('days since ')
+            origin_datetime = s[n:]
+            odt = origin_datetime
+            days_since1    = self.time_range[0]
+            days_since2    = self.time_range[1]
+            start_datetime = self.get_datetime_from_days_since(days_since1, odt)
+            end_datetime   = self.get_datetime_from_days_since(days_since2, odt)
+            (start_date, start_time) = self.split_datetime_str( start_datetime )
+            (end_date, end_time)     = self.split_datetime_str( end_datetime )
+            self.datetime_start_date.value = start_datetime
+            self.datetime_end_date.value   = end_datetime
+            self.datetime_start_time.value = str(start_time)
+            self.datetime_end_time.value   = str(end_time)
+            #----------------------------------
+            # This also works, but more steps
+            #----------------------------------
+            # (y1,m1,d1) = self.split_date_str( start_date )
+            # (y2,m2,d2) = self.split_date_str( end_date )
+            # self.datetime_start_date.value = datetime.date(y1, m1, d1)
+            # self.datetime_end_date.value   = datetime.date(y2, m2, d2)  
+
+        self.datetime_notes.value = self.list_to_string( info )
+
+    #   update_datetime_panel()
+    #--------------------------------------------------------------------  
+    def split_datetime_str(self, datetime_obj, datetime_sep=' '):
+      
+        datetime_str = str(datetime_obj)
+        parts = datetime_str.split( datetime_sep )
+        date_str = parts[0]
+        time_str = parts[1]
+        return (date_str, time_str)
+
+    #   split_datetime_str()
+    #--------------------------------------------------------------------  
+    def split_date_str(self, date_str, date_sep='-'):
+
+        date_parts = date_str.split( date_sep )
+        year  = int(date_parts[0])
+        month = int(date_parts[1])   # NOTE:  int('08') = 8
+        day   = int(date_parts[2])
+        return (year, month, day)
+         
+    #   split_date_str()
+    #--------------------------------------------------------------------  
+    def split_time_str(self, time_str, time_sep=':'):
+
+        time_parts = time_str.split( time_sep )
+        hour   = int(time_parts[0])
+        minute = int(time_parts[1])
+        second = int(time_parts[2])
+        return (hour, minute, second)
+
+    #   split_time_str()
+    #--------------------------------------------------------------------                       
+    def get_datetime_from_days_since(self, days_since, origin_datetime):
+
+        #--------------------------------------------- 
+        # e.g. origin_datetime = '1800-1-1 00:00:00'
+        #--------------------------------------------- 
+        (origin_date, origin_time) = self.split_datetime_str( origin_datetime )
+        (y, m,  d) = self.split_date_str( origin_date )
+        (h, m2, s) = self.split_time_str( origin_time )
+        origin_obj = datetime.datetime(y, m, d, h, m2, s)
+
+        #---------------------------------------------        
+        # Create new datetime object from days_since
+        #---------------------------------------------
+        delta      = datetime.timedelta( days_since )
+        new_dt_obj = (origin_obj + delta)
+        # print('new_dt_obj =', new_dt_obj)
+        # print('type(new_dt_obj) =', type(new_dt_obj))
+        # print('new_dt_obj =', net_dt_obj.strftime('%Y-%m-%d %H:%M:%S'))
+
+        return new_dt_obj
+
+    #   get_datetime_from_days_since()
+    #--------------------------------------------------------------------
+    def get_duration(start_date=None, start_time=None,
+                     end_date=None, end_time=None,
+                     dur_units=None, REPORT=False):
+                 
+        #------------------------------------------------    
+        # Note:  Compute time span between 2 datetimes.
+        #------------------------------------------------
+        ## date_sep = '/'
+        date_sep = '-'
+        time_sep = ':'
+        #-------------------------------------
+        # Get parts of the start date & time
+        #-------------------------------------
+        (y1, m1,  d1) = self.split_date_str( start_date )
+        (h1, mm1, s1) = self.split_time_str( start_time )
+
+        #-----------------------------------
+        # Get parts of the end date & time
+        #-----------------------------------
+        (y2, m2,  d2) = self.split_date_str( end_date )
+        (h2, mm2, s2) = self.split_time_str( end_time )
+
+        #------------------------------
+        # Convert to datetime objects
+        #------------------------------
+        start_obj = datetime.datetime(y1, m1, d1, h1, mm1, s1)
+        end_obj   = datetime.datetime(y2, m2, d2, h2, mm2, s2)
+        
+        #---------------------------------------------
+        # Comput time duration between start and end
+        #---------------------------------------------
+        duration_obj  = (end_obj - start_obj)
+        duration_secs = duration_obj.total_seconds()
+
+        #-----------------------------------------    
+        # Convert duration to dur_units provided
+        #-----------------------------------------
+        if (dur_units == 'seconds'):
+            duration = duration_secs
+        elif (dur_units == 'minutes'):
+            duration = (duration_secs / 60.0)
+        elif (dur_units == 'hours'):
+            duration = (duration_secs / 3600.0)
+        elif (dur_units == 'days'):
+            duration = (duration_secs / 86400.0)
+        elif (dur_units == 'years'):
+            duration = (duration_secs / 31536000.0)
+        else:
+            print('Unknown duration units = ' + dur_units + '.')
+            print('Returning duration in hours.')
+            duration = (duration_secs / 3600.0)
+        
+        if (REPORT):
+            print( 'duration =', duration, '[' + dur_units + ']' )
+
+        return duration
+    
+        #-----------------------------------------      
+        # Alternate approach, where dur_units is
+        # determined and then returned
+        #-----------------------------------------   
+    #     if (duration_secs < 60):
+    #         duration  = duration_secs
+    #         dur_units = 'seconds'
+    #     elif (duration_secs < 3600):
+    #         duration  = divmod( duration_secs, 60 )[0]
+    #         dur_units = 'minutes'
+    #     elif (duration_secs < 86400):
+    #         duration  = divmod( duration_secs, 3600 )[0]
+    #         dur_units = 'hours'
+    #     elif (duration_secs <  31536000):          
+    #         duration = divmod( duration_secs, 86400 )[0]
+    #         dur_units = 'days'
+    #     else:
+    #         duration = divmod( duration_secs, 86400 )[0]
+    #         dur_units = 'days'
+    #               
+    #     return (duration, dur_units)
      
+    #   get_duration()
+    #-------------------------------------------------------------------     
