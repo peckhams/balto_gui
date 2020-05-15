@@ -12,7 +12,10 @@ included in the same directory as the Jupyter notebook.
 #
 #------------------------------------------------------------------------
 
-from ipyleaflet import Map, basemaps
+from ipyleaflet import Map, basemaps, FullScreenControl
+from traitlets import Tuple
+## import ipyleaflet as ipyl
+
 import ipywidgets as widgets
 from ipywidgets import Layout
 from IPython.display import display, HTML
@@ -23,6 +26,8 @@ from IPython.display import display, HTML
 import pydap.client   # (for open_url, etc.)
 import requests   # for get_filenames()
 import json
+
+## import time  # (for sleep)
 
 # import balto_plot as bp
 
@@ -43,6 +48,7 @@ import json
 #      get_map_bounds()
 #      replace_map_bounds()
 #      replace_map_bounds2()
+#      zoom_out_to_new_bounds()    #######
 #      get_start_datetime()
 #      get_end_datetime()
 #      get_variable_name()
@@ -333,8 +339,10 @@ class balto_gui:
         #------------------------------------------------------------------
         o7 = widgets.Text(description='Data type:', style=left_style,
                           value='', layout=Layout(width=full_width_px) )
-        o8 = widgets.Text(description='Attributes:', style=left_style,
-                          value='', layout=Layout(width=full_width_px) ) 
+        o8 = widgets.Dropdown( description='Attributes:',
+                               options=[''], value='',
+                               disabled=False, style=left_style,
+                               layout=Layout(width=full_width_px) )
         o9 = widgets.Text(description='Status:', style=left_style,
                           value='Ready.', layout=Layout(width=full_width_px) )            
         b2 = widgets.Button(description="Reset", layout=Layout(width=btn_width_px))
@@ -413,7 +421,7 @@ class balto_gui:
         self.data_var_shape.value     = ''
         self.data_var_dims.value      = ''
         self.data_var_type.value      = ''
-        self.data_var_atts.value      = ''
+        self.data_var_atts.options    = ['']
         self.data_status.value        = 'Ready.'   
 
     #   reset_data_panel() 
@@ -442,7 +450,9 @@ class balto_gui:
         #---------------------------------------                
         m = Map(center=(0.0, 0.0), zoom=1,
                 layout=Layout(width=map_width_px, height=map_height_px))
-
+        ## m.add_control( FullScreenControl(), position='bottomright' )
+        m.add_control( FullScreenControl( position='topright' ) )
+        
         #-----------------------------------------------------
         # Does "step=0.01" restrict accuracy of selection ??
         #-----------------------------------------------------
@@ -504,7 +514,9 @@ class balto_gui:
         #-----------------
         bm.observe( self.change_base_map, names=['options','value'] )
         m.on_interaction( self.replace_map_bounds )
-        b1.on_click( self.update_map_view )
+        m.observe( self.zoom_out_to_new_bounds, 'bounds' )
+        b1.on_click( self.update_map_bounds )
+        ## b1.on_click( self.zoom_out_to_new_bounds )
         b2.on_click( self.reset_map_panel )
                                    
     #   make_map_panel()
@@ -677,11 +689,16 @@ class balto_gui:
             #------------------------------------      
             # Get the visible map bounds, after
             # interaction such as pan or zoom
-            #------------------------------------  
-            minlon = self.map_window.west
-            minlat = self.map_window.south
-            maxlon = self.map_window.east
-            maxlat = self.map_window.north
+            #------------------------------------
+            bounds = self.map_window.bounds
+            minlat = bounds[0][0]
+            minlon = bounds[0][1]
+            maxlat = bounds[1][0]
+            maxlon = bounds[1][1]  
+#             minlon = self.map_window.west
+#             minlat = self.map_window.south
+#             maxlon = self.map_window.east
+#             maxlat = self.map_window.north
             return (minlon, minlat, maxlon, maxlat)
         else:
             #---------------------------------
@@ -732,6 +749,99 @@ class balto_gui:
 #         # with output2:
 #         #   print( event )
 #
+    #--------------------------------------------------------------------
+    def update_map_bounds(self, caller_obj=None):
+
+        (bb_minlon, bb_minlat, bb_maxlon, bb_maxlat) = \
+            self.get_map_bounds( FROM_MAP = False )
+        bb_midlon = (bb_minlon + bb_maxlon) / 2
+        bb_midlat = (bb_minlat + bb_maxlat) / 2 
+        bb_center = ( bb_midlat, bb_midlon )
+        # print('bb_minlon, bb_maxlon =', bb_minlon, bb_maxlon)
+        # print('bb_minlat, bb_maxlat =', bb_minlat, bb_maxlat)
+        #----------------------------------------------------------
+        zoom = self.map_window.max_zoom  # (usually 18)
+        self.map_window.center = bb_center        
+        self.map_window.zoom   = zoom
+        ## print('max_zoom =', self.map_window.max_zoom)
+        ## print('map_window.bounds =', self.map_window.bounds )
+
+        #------------------------------------
+        # Add "new_bounds" attribute to map
+        #------------------------------------
+        new_bounds = ((bb_minlat, bb_minlon), (bb_maxlat, bb_maxlon))
+        self.map_window.new_bounds = Tuple()
+        self.map_window.new_bounds = new_bounds 
+    
+    #   update_map_bounds()
+    #--------------------------------------------------------------------
+    def zoom_out_to_new_bounds(self, change=None):
+        # the change owner is the widget triggering the handler, in this case a Map
+        m = change.owner
+
+        # if we're not zoomed all the way out already, and we have a target...
+        if (m.zoom > 1 and m.new_bounds):
+            b = m.new_bounds
+            n = change.new
+            if (n[0][0] < b[0][0] and n[0][1] < b[0][1] and
+                n[1][0] > b[1][0] and n[1][1] > b[1][1]):
+                # bounds are already large enough, so remove the target
+                m.new_bounds = None
+            else:
+                # zoom out
+                m.zoom = m.zoom - 1
+    
+    #   zoom_out_to_new_bounds()
+    #--------------------------------------------------------------------
+    def zoom_out_to_new_bounds_v0(self, caller_obj=None):
+     
+        (bb_minlon, bb_minlat, bb_maxlon, bb_maxlat) = \
+            self.get_map_bounds( FROM_MAP = False )
+        bb_midlon = (bb_minlon + bb_maxlon) / 2
+        bb_midlat = (bb_minlat + bb_maxlat) / 2 
+        bb_center = ( bb_midlat, bb_midlon )
+        print('bb_minlon, bb_maxlon =', bb_minlon, bb_maxlon)
+        print('bb_minlat, bb_maxlat =', bb_minlat, bb_maxlat)
+        zoom = self.map_window.max_zoom  # (usually 18)
+        zoom = zoom - 1
+        ## print('max_zoom =', self.map_window.max_zoom)
+        
+        self.map_window.center = bb_center        
+        self.map_window.zoom   = zoom
+        print('map_window.bounds =', self.map_window.bounds )
+        # bounds is read-only
+        ## self.map_window.bounds = ((bb_midlat,bb_midlon),(bb_midlat,bb_midlon))
+        while (True):
+            # time.sleep(0.5)  ######
+            (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
+            print('minlon, maxlon =', minlon, maxlon )
+            print('minlat, maxlat =', minlat, maxlat )
+            if (minlon < bb_minlon) and (maxlon > bb_maxlon) and \
+               (minlat < bb_minlat) and (maxlat > bb_maxlat):
+               break
+            else:
+               zoom -= 1
+               if (zoom > 0):
+                   print('zoom =', zoom)
+                   self.map_window.zoom = zoom
+               else:
+                   break
+
+            (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
+            print('minlon, maxlon =', minlon, maxlon )
+            print('minlat, maxlat =', minlat, maxlat )
+            if (minlon < bb_minlon) and (maxlon > bb_maxlon) and \
+               (minlat < bb_minlat) and (maxlat > bb_maxlat):
+               break
+            else:
+               zoom -= 1
+               if (zoom > 0):
+                   print('zoom =', zoom)
+                   self.map_window.zoom = zoom
+               else:
+                   break
+        
+    #   zoom_out_to_new_bounds_v0
     #--------------------------------------------------------------------
     def get_start_datetime(self):
 
@@ -929,7 +1039,7 @@ class balto_gui:
         self.data_var_shape.value     = shape
         self.data_var_dims.value      = dims
         self.data_var_type.value      = dtype
-        self.data_var_atts.value      = atts
+        self.data_var_atts.options    = atts
 
     #   show_var_info()
     #--------------------------------------------------------------------  
@@ -1074,7 +1184,17 @@ class balto_gui:
 
         var = self.dataset[ short_name ]
         if hasattr(var, 'attributes'):
-            return str( var.attributes )    #### use str()
+            #----------------------------------------
+            # Convert dictionary to list of strings
+            #----------------------------------------
+            att_list = []
+            for key, val in var.attributes.items():
+                att_list.append( str(key) + ': ' + str(val) )
+            return att_list
+            #-------------------------------------------
+            # Return all attributes as one long string
+            #-------------------------------------------
+            ### return str( var.attributes )    #### use str()
         else:
             return 'No attributes found.'
     
@@ -1236,19 +1356,26 @@ class balto_gui:
 
     #   download_data()    
     #--------------------------------------------------------------------
-    def show_grid(self, grid, long_name=None, extent=None,
+    def show_grid(self, grid, var_name=None, extent=None,
                   cmap='rainbow', xsize=8, ysize=8 ):
 
+        #---------------------------------------------------
+        # Note:  extent = [minlon, maxlon, minlat, maxlat]
+        #        But get_map_bounds() returns:
+        #           (minlon, minlat, maxlon, maxlat)
+        #---------------------------------------------------
         if (grid.ndim != 2):
             print('Sorry, show_grid() only works for 2D arrays.')
             return
         
-        if (long_name is None):
-            long_name = self.data_var_name.value
+        if (var_name is None):
+            var_name = self.data_var_long_name.value
+            ## var_name = self.data_var_name.value
         if (extent is None):
-            extent = self.get_map_bounds()
+            (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
+            extent = [minlon, maxlon, minlat, maxlat]
         
-        bp.show_grid_as_image( grid, long_name, extent=None,
+        bp.show_grid_as_image( grid, var_name, extent=extent,
                         cmap='rainbow', xsize=xsize, ysize=ysize )
                         ## stretch='hist_equal')
                         ## NO_SHOW=False, im_file=None,
