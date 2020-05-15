@@ -870,8 +870,8 @@ class balto_gui:
     def get_start_datetime(self):
 
         # Need the str() here
-        d1 = self.datetime_start_date_box
-        d3 = self.datetime_start_time_box    
+        d1 = self.datetime_start_date
+        d3 = self.datetime_start_time
         s1 = str(d1.value) if (d1.value is not None) else 'Not set'
         s2 = str(d3.value) if (d3.value is not None) else 'Not set'
         return (s1, s2)
@@ -880,8 +880,8 @@ class balto_gui:
     def get_end_datetime(self):
 
         # Need the str() here
-        d2 = self.datetime_end_date_box 
-        d4 = self.datetime_end_time_box
+        d2 = self.datetime_end_date 
+        d4 = self.datetime_end_time
         s1 = str(d2.value) if (d2.value is not None) else 'Not set'
         s2 = str(d4.value) if (d4.value is not None) else 'Not set'
         return (s1, s2)
