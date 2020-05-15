@@ -12,7 +12,7 @@ You can run the notebook in a browser window without installing anything on your
 To run this Jupyter notebook without Binder, it is recommended to install Python 3.7 from an Anaconda distribution and to then create a conda environment called balto. Instructions for how to create a conda environment are given in Appendix 1 of version 2 of the notebook.
 
 Version 2<br>
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/mariutzica/balto_gui/79c7536feb60a196c0357b2390e2701808563fcb?filepath=BALTO_GUI.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/mariutzica/balto_gui/1751af240e6aeb023cd897072e59a020dcadaa25?filepath=BALTO_GUI_v2.ipynb)
 <br>
 
 Version 1<br>
