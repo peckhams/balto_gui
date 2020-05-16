@@ -48,8 +48,6 @@ import datetime      # (used by get_duration() )
 #      replace_map_bounds2()
 #      update_map_bounds()
 #      zoom_out_to_new_bounds()
-#      get_start_datetime()
-#      get_end_datetime()
 #      get_variable_name()
 #      get_opendap_package()
 #      get_download_format()
@@ -80,11 +78,17 @@ import datetime      # (used by get_duration() )
 #      show_grid()
 #      -------------------------------
 #      update_datetime_panel()
+#      get_datetime_obj_from_str()
+#      get_start_datetime_obj()
+#      get_end_datetime_obj()
 #      split_datetime_str()
 #      split_date_str()
 #      split_time_str()
 #      get_datetime_from_days_since()
-#      get_duration()
+#      get_days_since_from_datetime()
+#      get_month_difference()
+#      get_new_time_index_range()
+#      get_duration()  ## not used
 #
 #------------------------------
 # Example GES DISC opendap URL
@@ -817,75 +821,55 @@ class balto_gui:
     
     #   zoom_out_to_new_bounds()
     #--------------------------------------------------------------------
-    def zoom_out_to_new_bounds_v0(self, caller_obj=None):
-     
-        (bb_minlon, bb_minlat, bb_maxlon, bb_maxlat) = \
-            self.get_map_bounds( FROM_MAP = False )
-        bb_midlon = (bb_minlon + bb_maxlon) / 2
-        bb_midlat = (bb_minlat + bb_maxlat) / 2 
-        bb_center = ( bb_midlat, bb_midlon )
-        print('bb_minlon, bb_maxlon =', bb_minlon, bb_maxlon)
-        print('bb_minlat, bb_maxlat =', bb_minlat, bb_maxlat)
-        zoom = self.map_window.max_zoom  # (usually 18)
-        zoom = zoom - 1
-        ## print('max_zoom =', self.map_window.max_zoom)
-        
-        self.map_window.center = bb_center        
-        self.map_window.zoom   = zoom
-        print('map_window.bounds =', self.map_window.bounds )
-        # bounds is read-only
-        ## self.map_window.bounds = ((bb_midlat,bb_midlon),(bb_midlat,bb_midlon))
-        while (True):
-            # time.sleep(0.5)  ######
-            (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
-            print('minlon, maxlon =', minlon, maxlon )
-            print('minlat, maxlat =', minlat, maxlat )
-            if (minlon < bb_minlon) and (maxlon > bb_maxlon) and \
-               (minlat < bb_minlat) and (maxlat > bb_maxlat):
-               break
-            else:
-               zoom -= 1
-               if (zoom > 0):
-                   print('zoom =', zoom)
-                   self.map_window.zoom = zoom
-               else:
-                   break
-
-            (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
-            print('minlon, maxlon =', minlon, maxlon )
-            print('minlat, maxlat =', minlat, maxlat )
-            if (minlon < bb_minlon) and (maxlon > bb_maxlon) and \
-               (minlat < bb_minlat) and (maxlat > bb_maxlat):
-               break
-            else:
-               zoom -= 1
-               if (zoom > 0):
-                   print('zoom =', zoom)
-                   self.map_window.zoom = zoom
-               else:
-                   break
-        
-    #   zoom_out_to_new_bounds_v0
-    #--------------------------------------------------------------------
-    def get_start_datetime(self):
-
-        # Need the str() here
-        d1 = self.datetime_start_date
-        d3 = self.datetime_start_time
-        s1 = str(d1.value) if (d1.value is not None) else 'Not set'
-        s2 = str(d3.value) if (d3.value is not None) else 'Not set'
-        return (s1, s2)
-
-    #--------------------------------------------------------------------
-    def get_end_datetime(self):
-
-        # Need the str() here
-        d2 = self.datetime_end_date 
-        d4 = self.datetime_end_time
-        s1 = str(d2.value) if (d2.value is not None) else 'Not set'
-        s2 = str(d4.value) if (d4.value is not None) else 'Not set'
-        return (s1, s2)
-
+#     def zoom_out_to_new_bounds_v0(self, caller_obj=None):
+#      
+#         (bb_minlon, bb_minlat, bb_maxlon, bb_maxlat) = \
+#             self.get_map_bounds( FROM_MAP = False )
+#         bb_midlon = (bb_minlon + bb_maxlon) / 2
+#         bb_midlat = (bb_minlat + bb_maxlat) / 2 
+#         bb_center = ( bb_midlat, bb_midlon )
+#         print('bb_minlon, bb_maxlon =', bb_minlon, bb_maxlon)
+#         print('bb_minlat, bb_maxlat =', bb_minlat, bb_maxlat)
+#         zoom = self.map_window.max_zoom  # (usually 18)
+#         zoom = zoom - 1
+#         ## print('max_zoom =', self.map_window.max_zoom)
+#         
+#         self.map_window.center = bb_center        
+#         self.map_window.zoom   = zoom
+#         print('map_window.bounds =', self.map_window.bounds )
+#         # bounds is read-only
+#         ## self.map_window.bounds = ((bb_midlat,bb_midlon),(bb_midlat,bb_midlon))
+#         while (True):
+#             # time.sleep(0.5)  ######
+#             (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
+#             print('minlon, maxlon =', minlon, maxlon )
+#             print('minlat, maxlat =', minlat, maxlat )
+#             if (minlon < bb_minlon) and (maxlon > bb_maxlon) and \
+#                (minlat < bb_minlat) and (maxlat > bb_maxlat):
+#                break
+#             else:
+#                zoom -= 1
+#                if (zoom > 0):
+#                    print('zoom =', zoom)
+#                    self.map_window.zoom = zoom
+#                else:
+#                    break
+# 
+#             (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
+#             print('minlon, maxlon =', minlon, maxlon )
+#             print('minlat, maxlat =', minlat, maxlat )
+#             if (minlon < bb_minlon) and (maxlon > bb_maxlon) and \
+#                (minlat < bb_minlat) and (maxlat > bb_maxlat):
+#                break
+#             else:
+#                zoom -= 1
+#                if (zoom > 0):
+#                    print('zoom =', zoom)
+#                    self.map_window.zoom = zoom
+#                else:
+#                    break
+#         
+#     #   zoom_out_to_new_bounds_v0
     #--------------------------------------------------------------------
     def get_variable_short_name(self):
 
@@ -1293,8 +1277,17 @@ class balto_gui:
         else:
            msg0 = ['ERROR: No dataset has been selected.']
        
-        (start_date, start_time) = self.get_start_datetime()
-        (end_date, end_time)     = self.get_end_datetime()
+        start_datetime_obj = self.get_start_datetime_obj()
+        ### (start_date, start_time) = self.split_datetime_str
+        start_date = str( start_datetime_obj.date() )
+        start_time = str( start_datetime_obj.time() )
+
+        end_datetime_obj = self.get_end_datetime_obj()
+        end_date = str( end_datetime_obj.date() )
+        end_time = str( end_datetime_obj.time() )
+                
+#         (start_date, start_time) = self.get_start_datetime()
+#         (end_date, end_time)     = self.get_end_datetime()
         
         msg = [
         'var short name  = ' + self.get_variable_short_name(),
@@ -1303,8 +1296,8 @@ class balto_gui:
         ## 'bounds = ' + str(self.get_map_bounds()),
         'start date = ' + start_date,
         'start time = ' + start_time,
-        'end date = ' + end_date,
-        'end time = ' + end_time ]
+        'end date   = ' + end_date,
+        'end time   = ' + end_time ]
         ## 'opendap package = ' + self.get_opendap_package(),
         msg = msg0 + msg
 
@@ -1349,7 +1342,11 @@ class balto_gui:
         # Is there a time variable ?  If so, use time
         # range selected in GUI to clip the data.
         #----------------------------------------------
-             
+        time_index_range = self.get_new_time_index_range()
+        ti1 = time_index_range[0]
+        ti2 = time_index_range[1]
+        print('New time indices, ti1, ti2 =', ti1, ti2)
+           
         #--------------------------------------        
         # Did user set a spatial resolution ?
         #--------------------------------------
@@ -1369,11 +1366,23 @@ class balto_gui:
         # which causes it to be downloaded, and then
         # store it into balto.user_var.
         #---------------------------------------------
-        data_ref  = self.dataset[ short_name ]
-        data_dims = data_ref.dimensions
-        ndim      = len( data_dims )
-        var = data_ref.array[:].data  ## (all indices of data)
-        ### var = data_ref[:].array[:].data         
+        data_obj  = self.dataset[ short_name ]
+        ## data_dims = data_obj.dimensions
+        ## ndim      = len( data_dims )
+
+        #-----------------------------------------------
+        # Restrict array indices here, before download
+        #-----------------------------------------------
+        grid = data_obj[ti1:ti2, :, :]   ############ ASSUMES time + 2D
+        var  = grid.array[:].data
+        
+        ## RECALL:  self.time_var = self.time_obj.data[:]
+        ## var = data_obj.array[:]
+        ## var = data_obj.data[ti1:ti2, :, :]   #######
+        
+        # Next line may not be general.
+        ## var = data_obj.array[:].data    ## (all indices of data)
+       
         self.user_var = var 
 
         #----------------------------------------------------        
@@ -1413,9 +1422,11 @@ class balto_gui:
     #--------------------------------------------------------------------
     def update_datetime_panel(self):
  
-        ## short_names = self.dataset.keys()
-        info = []   
-        short_names = self.var_short_names
+        info = []
+        #-----------------------------------------
+        # Are there any times for this dataset ?
+        #-----------------------------------------
+        short_names = self.var_short_names   # self.dataset.keys()
         if ('time' in short_names):
             self.time_obj = self.dataset.time
             self.time_var = self.time_obj.data[:]
@@ -1427,14 +1438,17 @@ class balto_gui:
             self.datetime_notes.value = msg
             return
         #----------------------------------------------------
-        # Use min and max times, vs. "actual_range" ??
+        # Compute the min and max times; save as time_range
+        #----------------------------------------------------
         min_time = self.time_var.min()
         max_time = self.time_var.max()
         self.time_range = [min_time, max_time]
         msg = 'Time range for this dataset = '
         msg += '(' + str(min_time) + ', ' + str(max_time) + ')'
         info.append( msg )
-        #----------------------------------------------------        
+        #------------------------------------------------
+        # Is there an attribute called "actual_range" ?
+        #------------------------------------------------      
         if (hasattr(self.time_obj, 'actual_range')):
             range_str = str( self.time_obj.actual_range )
             msg = 'Time "actual_range" is: ' + range_str
@@ -1444,7 +1458,9 @@ class balto_gui:
             msg = 'Unable to find "actual range" for times.'
             self.datetime_notes.value = msg
             return
-        #----------------------------------------------------
+        #-----------------------------------------
+        # Is there an attribute called "units" ?
+        #-----------------------------------------
         if (hasattr(self.time_obj, 'units')):
             self.time_units = self.time_obj.units
             msg = 'Time "units" are: ' + self.time_units
@@ -1453,22 +1469,51 @@ class balto_gui:
             msg = 'Unable to find "units" for times.'
             self.datetime_notes.value = msg
             return
-        #----------------------------------------------------
+        #-------------------------------------------
+        # Is there an attribute called "delta_t" ?
+        # If so, assume it is in "datetime" form,
+        # such as 00-01-00 00:00:00" for 1 month.
+        #-------------------------------------------
+        if (hasattr(self.time_obj, 'delta_t')):
+            # Assume this is a datetime string.
+            self.time_delta = self.time_obj.delta_t
+            msg = 'Time "delta_t" is: ' + self.time_delta
+            info.append( msg )
+        else:
+            msg = 'Unable to find "delta_t" for times.'
+            self.datetime_notes.value = msg
+            return
+        #---------------------------------------------------
+        # Are time units given as "days since" some date ?
+        #---------------------------------------------------
         s = self.time_units
         if (s.startswith('days since ')):
+            #-------------------------------------
+            # Process the "origin" date and time
+            #-------------------------------------
             n = len('days since ')
-            origin_datetime = s[n:]
-            odt = origin_datetime
+            odt = s[n:]
+            self.origin_datetime_str = odt
+            (date_str, time_str) = self.split_datetime_str( odt )
+            self.origin_datetime_obj = self.get_datetime_obj_from_str( date_str, time_str)
+            #---------------------------------------------
+            # Now process "days since" for start and end
+            #---------------------------------------------
             days_since1    = self.time_range[0]
             days_since2    = self.time_range[1]
-            start_datetime = self.get_datetime_from_days_since(days_since1, odt)
-            end_datetime   = self.get_datetime_from_days_since(days_since2, odt)
-            (start_date, start_time) = self.split_datetime_str( start_datetime )
-            (end_date, end_time)     = self.split_datetime_str( end_datetime )
-            self.datetime_start_date.value = start_datetime
-            self.datetime_end_date.value   = end_datetime
-            self.datetime_start_time.value = str(start_time)
-            self.datetime_end_time.value   = str(end_time)
+            start_datetime_obj = self.get_datetime_from_days_since(days_since1)
+            end_datetime_obj   = self.get_datetime_from_days_since(days_since2)
+            start_datetime_str = str(start_datetime_obj)
+            end_datetime_str   = str(end_datetime_obj)
+            (start_date, start_time) = self.split_datetime_str( start_datetime_str )
+            (end_date, end_time)     = self.split_datetime_str( end_datetime_str )
+            #-----------------------------------------------------------
+            # Be sure to set date values as date_obj, not datetime_obj
+            #-----------------------------------------------------------
+            self.datetime_start_date.value = start_datetime_obj.date()
+            self.datetime_end_date.value   = end_datetime_obj.date()
+            self.datetime_start_time.value = start_time
+            self.datetime_end_time.value   = end_time
             #----------------------------------
             # This also works, but more steps
             #----------------------------------
@@ -1480,6 +1525,73 @@ class balto_gui:
         self.datetime_notes.value = self.list_to_string( info )
 
     #   update_datetime_panel()
+    #--------------------------------------------------------------------
+    def get_datetime_obj_from_str(self, date_str, time_str='00:00:00'):
+
+        #---------------------------------------------------
+        # date_str = 'YYYY-MM-DD', time_str = 'HH:MM:SS'
+        #---------------------------------------------------
+        ## e.g. d1 = str(self.datetime_end_date.value)
+        ## e.g. t1 = self.datetime_end_time.value
+   
+        (y, m1, d) = self.split_date_str(date_str)
+        (h, m2, s) = self.split_time_str(time_str)
+        datetime_obj = datetime.datetime(y, m1, d, h, m2, s) 
+        return datetime_obj
+        
+    #   get_datetime_obj_from_str()
+    #--------------------------------------------------------------------                       
+    def get_datetime_obj_from_one_str(self, datetime_str):
+    
+        (date, time) = self.split_datetime_str( datetime_str )
+        (y, m1,  d)  = self.split_date_str( date )
+        (h, m2, s)   = self.split_time_str( time )
+        datetime_obj = datetime.datetime(y, m1, d, h, m2, s)
+        return datetime_obj
+
+    #   get_datetime_obj_from_one_str()
+    #--------------------------------------------------------------------
+    def get_start_datetime_obj(self):
+
+        #---------------------------------------
+        # d1.value is a datetime "date object"
+        # t1.value is a time string: 00:00:00
+        #---------------------------------------
+        d1 = self.datetime_start_date
+        t1 = self.datetime_start_time
+        if (d1.value is None):
+            return None
+        date_str = str(d1.value)
+        time_str = t1.value   # (already string)
+        ## print('In get_start_datetime_obj():')
+        ## print('date_str =', date_str)
+        ## print('time_str =', time_str)
+        
+        datetime_obj = self.get_datetime_obj_from_str(date_str, time_str)
+        return datetime_obj
+    
+    #   get_start_datetime_obj()
+    #--------------------------------------------------------------------
+    def get_end_datetime_obj(self):
+
+        #---------------------------------------
+        # d1.value is a datetime "date object"
+        # t1.value is a time string: 00:00:00
+        #---------------------------------------
+        d1 = self.datetime_end_date
+        t1 = self.datetime_end_time
+        if (d1.value is None):
+            return None
+        date_str = str(d1.value)
+        time_str = t1.value   # (already string)
+        ## print('In get_end_datetime_obj():')
+        ## print('date_str =', date_str)
+        ## print('time_str =', time_str)
+        
+        datetime_obj = self.get_datetime_obj_from_str(date_str, time_str)
+        return datetime_obj
+
+    #   get_end_datetime_obj()
     #--------------------------------------------------------------------  
     def split_datetime_str(self, datetime_obj, datetime_sep=' '):
       
@@ -1511,19 +1623,12 @@ class balto_gui:
 
     #   split_time_str()
     #--------------------------------------------------------------------                       
-    def get_datetime_from_days_since(self, days_since, origin_datetime):
-
-        #--------------------------------------------- 
-        # e.g. origin_datetime = '1800-1-1 00:00:00'
-        #--------------------------------------------- 
-        (origin_date, origin_time) = self.split_datetime_str( origin_datetime )
-        (y, m,  d) = self.split_date_str( origin_date )
-        (h, m2, s) = self.split_time_str( origin_time )
-        origin_obj = datetime.datetime(y, m, d, h, m2, s)
+    def get_datetime_from_days_since(self, days_since):
 
         #---------------------------------------------        
         # Create new datetime object from days_since
         #---------------------------------------------
+        origin_obj = self.origin_datetime_obj
         delta      = datetime.timedelta( days_since )
         new_dt_obj = (origin_obj + delta)
         # print('new_dt_obj =', new_dt_obj)
@@ -1533,6 +1638,137 @@ class balto_gui:
         return new_dt_obj
 
     #   get_datetime_from_days_since()
+    #--------------------------------------------------------------------                       
+    def get_days_since_from_datetime(self, datetime_obj):
+
+        #------------------------------------------------
+        # Comput time duration between datetime objects
+        #------------------------------------------------
+        origin_obj    = self.origin_datetime_obj
+        duration_obj  = (datetime_obj - origin_obj)
+        duration_secs = duration_obj.total_seconds()        
+        duration_days = (duration_secs / 86400.0)
+        days_since    = duration_days
+
+        return days_since
+
+    #   get_days_since_from_datetime()
+    #-------------------------------------------------------------------- 
+#     def replace_time_in_datetime_obj(self, datetime_obj, time_str):
+#  
+#         time_obj = datetime.datetime.strptime(time_str, '%H:%M:%S').time()
+#    
+#         # (h, m, s) = self.split_time_str( time_str )
+#         ### datetime.datetime.strptime( )
+#         datetime_obj = datetime.datetime.combine( datetime_obj, time_obj )
+#         # datetime_obj.replace(hour=h, minute=m, second=s)
+#         # problem is that datetime_obj is just date object rn.
+#         
+#     #   replace_time_in_datetime_obj()
+    #--------------------------------------------------------------------  
+    def get_month_difference(self, start_datetime_obj, end_datetime_obj ):
+ 
+        #-------------------------------------------
+        # Example 0: 2017-09 to 2017-09
+        # months = (2017-2017)*12 = 0
+        # months = (months - 9) = (0-9) = -0
+        # months = (months + 9) = 0   (as index)
+        #-------------------------------------------           
+        # Example 1: 2017-09 to 2018-02
+        # 9:10, 10:11, 11:12, 12:1, 1:2 = 5 (if same days)
+        # months = (2018-2017)*12  = 12
+        # months = (months - 9) = 3
+        # months = (months + 2) = 3 + 2 = 5
+        #-------------------------------------------
+        start_year = start_datetime_obj.year
+        end_year   = end_datetime_obj.year
+        months     = (end_year - start_year) * 12
+        #-------------------------------------------
+        start_month = start_datetime_obj.month
+        end_month   = end_datetime_obj.month
+        months = months - start_month
+        months = months + end_month
+        ## months = months + 1  # (no: get 1 if dates same)
+        ## print('month difference =', months)
+        return months
+
+    #   get_month_difference()
+    #--------------------------------------------------------------------    
+    def get_new_time_index_range(self):
+ 
+        # (start_date, start_time) = self.get_start_datetime()
+        # (end_date, end_time)     = self.get_end_datetime()
+        # start_datetime_str = (start_date + ' ' + start_time)
+        # end_datetime_str   = (end_date   + ' ' + end_time)
+
+        if not(hasattr(self, 'origin_datetime_str')):
+            print('Sorry, origin datetime is not set.')
+            nt = len(self.time_var)
+            return [0, nt - 1]  # (unrestricted by choices) 
+
+        #--------------------------------------------------------
+        # Get min possible datetime, from time_vars.min().
+        # Every time_var value is measured from "origin" (1800)
+        #--------------------------------------------------------
+        ## origin_datetime_obj = self.origin_datetime_obj
+        days_since_min = self.time_var.min()
+        min_datetime_obj  = self.get_datetime_from_days_since( days_since_min )
+        
+        #-----------------------------------------------        
+        # Get current settings from the datetime panel
+        #-----------------------------------------------
+        start_datetime_obj  = self.get_start_datetime_obj()
+        end_datetime_obj    = self.get_end_datetime_obj()
+
+#         start_date_obj = self.datetime_start_date.value
+#         start_time_str = self.datetime_start_time.value
+#         start_time_obj = datetime.datetime.strptime(start_time_str, '%H:%M:%S').time()
+#         start_datetime_obj = datetime.datetime.combine( start_date_obj, start_time_obj )
+#         ## self.replace_time_in_datetime_obj( start_date_obj, start_time_str)
+#         #-------------------------------------------------------------------        
+#         end_date_obj   = self.datetime_end_date.value
+#         end_time_str   = self.datetime_end_time.value
+#         end_time_obj   = datetime.datetime.strptime(end_time_str, '%H:%M:%S').time()
+#         end_datetime_obj = datetime.datetime.combine( end_date_obj, end_time_obj )
+#         ## self.replace_time_in_datetime_obj( end_date_obj, end_time_str)
+#         #-------------------------------------------------------------------         
+#         odt_str     = self.origin_datetime_str
+#         days_since1 = self.get_days_since_from_datetime(start_datetime_obj, odt_str)
+#         days_since2 = self.get_days_since_from_datetime(end_datetime_obj,   odt_str)
+
+        # Not needed for current problem.
+#         days_since1 = self.get_days_since_from_datetime(start_datetime_obj)
+#         days_since2 = self.get_days_since_from_datetime(end_datetime_obj)
+        
+        n_months1 = self.get_month_difference( min_datetime_obj, start_datetime_obj  )
+        n_months2 = self.get_month_difference( min_datetime_obj, end_datetime_obj  )
+        start_index = n_months1
+        end_index   = n_months2
+       
+        #--------------------------------------------------        
+        # Subtract the min of days_since, from time_range
+        #--------------------------------------------------
+#         days_since_min = self.time_range[0]       
+#         start_index = (days_since1 - days_since_min)
+#         end_index   = (days_since2 - days_since_min)
+#         print('odt_str =', odt_str)
+#         print('days_since_min =', days_since_min)
+#         print('days_since1    =', days_since1)
+#         print('days_since2    =', days_since2)
+                
+        nt = len( self.time_var )
+        start_index = max(0, start_index)
+        end_index   = min(end_index, nt-1)
+        
+        # print('type(start_index) =', type(start_index) )
+        # print('type(end_index)   =', type(end_index) )
+        # print('start_index =', start_index)
+        # print('end_index   =', end_index)
+        # print('n_times     =', nt)
+
+        return [start_index, end_index]
+        
+    #   get_new_time_index_range()
     #--------------------------------------------------------------------
     def get_duration(start_date=None, start_time=None,
                      end_date=None, end_time=None,
