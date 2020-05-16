@@ -26,6 +26,7 @@ import pydap.client  # (for open_url, etc.)
 import requests      # (used by get_filenames() )
 import json
 import datetime      # (used by get_duration() )
+import copy
 
 # import balto_plot as bp
 
@@ -57,18 +58,21 @@ import datetime      # (used by get_duration() )
 #      update_filename_list()
 #      get_opendap_file_url()
 #      open_dataset()
-#      show_dataset_info()
-#      show_var_info()
+#      update_data_panel()
+#      --------------------------
+#      update_var_info()
 #      get_all_var_shortnames()
 #      get_all_var_longnames()
 #      get_all_var_units()
 #      --------------------------
+#      get_var_shortname()
 #      get_var_longname()
 #      get_var_units()
 #      get_var_shape()
 #      get_var_dimensions()
 #      get_var_dtype()
 #      get_var_attributes()
+#      get_var_time_attributes()
 #      ----------------------------
 #      get_abbreviated_var_name()
 #      get_possible_svo_names()
@@ -81,14 +85,19 @@ import datetime      # (used by get_duration() )
 #      get_datetime_obj_from_str()
 #      get_start_datetime_obj()
 #      get_end_datetime_obj()
+#      get_dt_from_datetime_str()
 #      split_datetime_str()
 #      split_date_str()
 #      split_time_str()
 #      get_datetime_from_days_since()
 #      get_days_since_from_datetime()
 #      get_month_difference()
+#      -------------------------------
 #      get_new_time_index_range()
-#      get_duration()  ## not used
+#      get_new_lat_index_range()
+#      get_new_lon_index_range()
+#      -------------------------------
+#      get_duration()  ## not used yet
 #
 #------------------------------
 # Example GES DISC opendap URL
@@ -204,7 +213,8 @@ class balto_gui:
         pad  = self.get_padding(1, HORIZONTAL=False)  # 1 lines
         head = widgets.HTML(value=f"<b><font size=5>BALTO User Interface</font></b>")
         # head = widgets.Label('BALTO User Interface')
-        self.gui = widgets.VBox([pad, head, acc])
+        ## self.gui = widgets.VBox([pad, head, acc])
+        self.gui = widgets.VBox([head, acc])   # (no padding above)
         
     #   make_gui()
     #--------------------------------------------------------------------
@@ -226,89 +236,6 @@ class balto_gui:
         return pad
         
     #   get_padding()
-    #--------------------------------------------------------------------
-#     def make_data_panel_v0(self):
-# 
-#         #-----------------------------------
-#         # Browse data on an OpenDAP server
-#         #-----------------------------------
-#         style1 = self.left_label_style
-#         att_width_px = self.att_width_px
-#         url_box_width_px = self.url_box_width_px
-# 
-#         o1 = widgets.Text(description='OpenDAP URL Dir:',
-#                           value=self.default_url_dir,
-#                           disabled=False, style=style1,
-#                           layout=Layout(width=url_box_width_px))
-#         b1 = widgets.Button(description="Go", layout=Layout(width='50px'))
-#         o2 = widgets.Dropdown( description='Filename:',
-#                                options=[''], value='',
-#                                disabled=False, style=style1,
-#                                layout=Layout(width=att_width_px) )
-#         ## o3 = widgets.Select( description='Variable:',
-#         o3 = widgets.Dropdown( description='Variable:',
-#                                options=[''], value='',
-#                                disabled=False, style=style1,
-#                                layout=Layout(width=att_width_px) )
-#         o4 = widgets.Text(description='Units:', style=style1,
-#                           value='', layout=Layout(width=att_width_px) )
-#         o5 = widgets.Text(description='Shape:', style=style1,
-#                           value='', layout=Layout(width=att_width_px) )
-#         o6 = widgets.Text(description='Dimensions:', style=style1,
-#                           value='', layout=Layout(width=att_width_px) )
-#         o7 = widgets.Text(description='Data type:', style=style1,
-#                           value='', layout=Layout(width=att_width_px) )
-#         o8 = widgets.Text(description='Status:', style=style1,
-#                           value='Ready.', layout=Layout(width=att_width_px) )
-#         b2 = widgets.Button(description="Reset", layout=Layout(width='70px'))
-# 
-#         #-------------------------------
-#         # Arrange widgets in the panel
-#         #-------------------------------                                  
-#         url_box  = widgets.HBox([o1, b1])   # directory + Go button
-#         stat_box = widgets.HBox([o8, b2])   # status + Reset button
-#         panel    = widgets.VBox([url_box,o2,o3,o4,o5,o6,o7,stat_box])
-#         
-#         self.data_url_dir   = o1   # on an OpenDAP server
-#         self.data_filename  = o2
-#         self.data_var_name  = o3
-#         self.data_var_units = o4
-#         self.data_var_shape = o5
-#         self.data_var_dims  = o6
-#         self.data_var_type  = o7
-#         self.data_status    = o8
-#         self.data_panel     = panel
-#         #-----------------
-#         # Event handlers
-#         #-----------------------------------------------------
-#         # Note: NEED to set names='value' here.  If names
-#         #       keyword is omitted, only works intermittently.
-#         #------------------------------------------------------------
-#         # "on_click" handler function is passed b1 as argument.
-#         # "observe" handler function is passed "change", which
-#         # is a dictionary, as argument. See Traitlet events.
-#         #------------------------------------------------------------
-#         b1.on_click( self.update_filename_list )
-#         b2.on_click( self.reset_data_panel )
-#         o2.observe( self.show_dataset_info, names=['options','value'] )
-#         o3.observe( self.show_var_info, names=['options', 'value'] )
-#         ## o3.observe( self.show_var_info, names='value' )
-#         ## o2.observe( self.show_dataset_info, names='All' )
-#         ## o3.observe( self.show_var_info, names='All' )
-#  
-#         #-------------------------------------------------------    
-#         # It turned out this wasn't an issue, but interesting.
-#         #-------------------------------------------------------
-#         # Note: Method functions have type "method" instead
-#         #       of "function" and therefore can't be passed
-#         #       directly to widget handlers like "on_click".
-#         #       But we can use the "__func__" attribute.
-#         #-------------------------------------------------------           
-# #         b1.on_click( self.update_filename_list.__func__ )
-# #         o2.observe( self.show_dataset_info.__func__ )
-# #         o3.observe( self.show_var_info.__func__, names='value' )
-#        
-#     #   make_data_panel_v0()
     #--------------------------------------------------------------------
     def make_data_panel(self):
 
@@ -394,11 +321,11 @@ class balto_gui:
         #------------------------------------------------------------
         b1.on_click( self.update_filename_list )
         b2.on_click( self.reset_data_panel )
-        o2.observe( self.show_dataset_info, names=['options','value'] )
-        o3.observe( self.show_var_info, names=['options', 'value'] )
-        ## o3.observe( self.show_var_info, names='value' )
-        ## o2.observe( self.show_dataset_info, names='All' )
-        ## o3.observe( self.show_var_info, names='All' )
+        o2.observe( self.update_data_panel, names=['options','value'] )
+        o3.observe( self.update_var_info, names=['options', 'value'] )
+        ## o3.observe( self.update_var_info, names='value' )
+        ## o2.observe( self.update_data_panel, names='All' )
+        ## o3.observe( self.update_var_info, names='All' )
  
         #-------------------------------------------------------    
         # It turned out this wasn't an issue, but interesting.
@@ -409,8 +336,8 @@ class balto_gui:
         #       But we can use the "__func__" attribute.
         #-------------------------------------------------------           
 #         b1.on_click( self.update_filename_list.__func__ )
-#         o2.observe( self.show_dataset_info.__func__ )
-#         o3.observe( self.show_var_info.__func__, names='value' )
+#         o2.observe( self.update_data_panel.__func__ )
+#         o3.observe( self.update_var_info.__func__, names='value' )
        
     #   make_data_panel()
     #--------------------------------------------------------------------
@@ -433,6 +360,8 @@ class balto_gui:
         self.data_var_type.value      = ''
         self.data_var_atts.options    = ['']
         self.data_status.value        = 'Ready.'   
+        #------------------------------------------
+        self.download_log.value = ''
 
     #   reset_data_panel() 
     #--------------------------------------------------------------------    
@@ -512,10 +441,10 @@ class balto_gui:
         
         self.map_basemap    = bm
         self.map_window     = m
-        self.map_minlon_box = w1
-        self.map_maxlon_box = w2
-        self.map_maxlat_box = w3
-        self.map_minlat_box = w4
+        self.map_minlon = w1
+        self.map_maxlon = w2
+        self.map_maxlat = w3
+        self.map_minlat = w4
         self.map_panel      = panel
         ## self.map_bounds     = (-180, -90, 180, 90)
 
@@ -580,10 +509,10 @@ class balto_gui:
     
         self.map_window.center = (0.0, 0.0)
         self.map_window.zoom = 1
-        self.map_minlon_box.value = '-180.0'
-        self.map_maxlon_box.value = '180.0'
-        self.map_minlat_box.value = '-90.0'
-        self.map_maxlat_box.value = '90.0'
+        self.map_minlon.value = '-180.0'
+        self.map_maxlon.value = '180.0'
+        self.map_minlat.value = '-90.0'
+        self.map_maxlat.value = '90.0'
     
     #   reset_map_panel()
     #--------------------------------------------------------------------  
@@ -624,26 +553,32 @@ class balto_gui:
                      layout=Layout(width=hint_width_px) )
                      ## layout=Layout(width=hint_width_px, margin=margin) )
                      ## disabled=False, style=hint_style )
-#         d7 = widgets.Text( description='Notes:',
+        d7 = widgets.Dropdown( description='Attributes:',
+                               options=[''], value='',
+                               disabled=False, style=date_style,
+                               layout=Layout(width=full_box_width_px) )
+#         d8 = widgets.Text( description='Notes:',
 #                      disabled=False, style=self.date_style,
-#                      layout=Layout(width=full_box_width_px) )                      
-        d7 = widgets.Textarea( description='Notes:', value='',
+#                      layout=Layout(width=full_box_width_px) ) 
+                     
+        d8 = widgets.Textarea( description='Notes:', value='',
                      disabled=False, style=self.date_style,
-                     layout=Layout(width=full_box_width_px, height='80px')) 
+                     layout=Layout(width=full_box_width_px, height='50px')) 
                                                              
         dates = widgets.VBox([d1, d2])
         times = widgets.VBox([d3, d4])
         hints = widgets.VBox([d5, d6])
         pad   = widgets.VBox([pp, pp])
         top   = widgets.HBox([dates, times, pad, hints])
-        panel = widgets.VBox([top, d7])
-        ## panel = widgets.VBox([top, pp, d7])
+        panel = widgets.VBox([top, d7, d8])
+        ## panel = widgets.VBox([top, pp, d7, d8])
                    
         self.datetime_start_date = d1
         self.datetime_start_time = d3
         self.datetime_end_date   = d2
         self.datetime_end_time   = d4
-        self.datetime_notes      = d7
+        self.datetime_attributes = d7
+        self.datetime_notes      = d8
         self.datetime_panel      = panel
 
     #   make_datetime_panel()
@@ -674,9 +609,9 @@ class balto_gui:
         ## panel = widgets.VBox([h3, status, log]) 
         panel = widgets.VBox([h3, log])
         
-        self.download_format  = f1
-        self.download_button  = b3
-        self.download_log_box = log                   
+        self.download_format = f1
+        self.download_button = b3
+        self.download_log    = log                   
         self.download_panel = panel
         
         #-----------------
@@ -721,10 +656,10 @@ class balto_gui:
             #---------------------------------
             # Get map bounds from text boxes
             #---------------------------------
-            minlon = self.map_minlon_box.value
-            minlat = self.map_minlat_box.value
-            maxlon = self.map_maxlon_box.value
-            maxlat = self.map_maxlat_box.value
+            minlon = self.map_minlon.value
+            minlat = self.map_minlat.value
+            maxlon = self.map_maxlon.value
+            maxlat = self.map_maxlat.value
             return (minlon, minlat, maxlon, maxlat)
 
     #   get_map_bounds()
@@ -741,10 +676,10 @@ class balto_gui:
         #--------------------------------        
         # Save new values in text boxes
         #--------------------------------
-        self.map_minlon_box.value = minlon
-        self.map_maxlon_box.value = maxlon
-        self.map_maxlat_box.value = maxlat
-        self.map_minlat_box.value = minlat
+        self.map_minlon.value = minlon
+        self.map_maxlon.value = maxlon
+        self.map_maxlat.value = maxlat
+        self.map_minlat.value = minlat
     
     #   replace_map_bounds()    
     #--------------------------------------------------------------------
@@ -871,11 +806,6 @@ class balto_gui:
 #         
 #     #   zoom_out_to_new_bounds_v0
     #--------------------------------------------------------------------
-    def get_variable_short_name(self):
-
-        return self.data_var_name.value
-
-    #--------------------------------------------------------------------
     def get_opendap_package(self):
     
         return self.prefs_package.value
@@ -967,7 +897,7 @@ class balto_gui:
 
     #   open_dataset()
     #--------------------------------------------------------------------
-    def show_dataset_info(self, change=None):
+    def update_data_panel(self, change=None):
 
         #-------------------------------------------------------
         # Note: When used as a callback/handler function for a
@@ -978,7 +908,7 @@ class balto_gui:
         #       <class 'traitlets.utils.bunch.Bunch'>
         #-------------------------------------------------------
         # print('type(change) =', type(change))
-        
+
         if (self.data_filename.value == ''):
             ## self.update_filename_list()   # (try this?)
             return
@@ -1010,11 +940,11 @@ class balto_gui:
         #------------------------------------
         # Show other info for this variable
         #------------------------------------
-        self.show_var_info()
+        self.update_var_info()
    
-    #   show_dataset_info() 
+    #   update_data_panel() 
     #--------------------------------------------------------------------
-    def show_var_info(self, change=None):
+    def update_var_info(self, change=None):
 
         #-------------------------------------------------------
         # Note: When used as a callback/handler function for a
@@ -1024,14 +954,14 @@ class balto_gui:
         #       The type of "change" is:
         #       <class 'traitlets.utils.bunch.Bunch'>
         #-------------------------------------------------------
-        short_name = self.data_var_name.value
+        short_name = self.get_var_shortname()
         if (short_name == ''):
             return
          
         #-----------------------------------------------      
         # Maybe later wrap this block in "try, except"
-        #-----------------------------------------------
-        # Note: long_name is selected from Dropdown.  
+        #----------------------------------------------
+        # Note: short_name is selected from Dropdown.  
         # var = dataset[ short_name ]
         #----------------------------------------------  
         long_name = self.get_var_longname( short_name )
@@ -1053,7 +983,7 @@ class balto_gui:
         #-------------------------------------------
         self.update_datetime_panel()
         
-    #   show_var_info()
+    #   update_var_info()
     #--------------------------------------------------------------------  
     def get_all_var_shortnames(self):
 
@@ -1097,6 +1027,15 @@ class balto_gui:
         self.var_units_names = units_names
 
     #   get_all_var_units()
+    #--------------------------------------------------------------------
+    def get_var_shortname(self):
+    
+        short_name = self.data_var_name.value
+        if (short_name == ''):
+            print('Short name is not set.')
+        return short_name
+            
+    #   get_var_shortname()
     #--------------------------------------------------------------------
     def get_var_longname( self, short_name ):
 
@@ -1213,6 +1152,31 @@ class balto_gui:
     
     #   get_var_attributes()
     #--------------------------------------------------------------------
+    def get_time_attributes( self):
+
+        if (hasattr(self.dataset, 'time')):
+            time = self.dataset.time
+        elif (hasattr(self.dataset, 'TIME')):
+            time = self.dataset.TIME
+        
+        if hasattr(time, 'attributes'):
+            #----------------------------------------
+            # Convert dictionary to list of strings
+            # to be displayed in a droplist.
+            #----------------------------------------
+            att_list = []
+            for key, val in time.attributes.items():
+                att_list.append( str(key) + ': ' + str(val) )
+            return att_list
+            #-------------------------------------------
+            # Return all attributes as one long string
+            #-------------------------------------------
+            ### return str( time.attributes )    #### use str()
+        else:
+            return 'No time attributes found.'
+    
+    #   get_time_attributes()
+    #--------------------------------------------------------------------
     def get_abbreviated_var_name(self, abbreviation ):
     
         map = {
@@ -1290,14 +1254,12 @@ class balto_gui:
 #         (end_date, end_time)     = self.get_end_datetime()
         
         msg = [
-        'var short name  = ' + self.get_variable_short_name(),
+        'var short name  = ' + self.get_var_shortname(),
         'download format = ' + self.get_download_format(),
         'map bounds = ' + str(self.get_map_bounds( FROM_MAP=False )),
         ## 'bounds = ' + str(self.get_map_bounds()),
-        'start date = ' + start_date,
-        'start time = ' + start_time,
-        'end date   = ' + end_date,
-        'end time   = ' + end_time ]
+        'start date and time = ' + start_date + ' ' + start_time,
+        'end date and time   = ' + end_date   + ' ' + end_time ]
         ## 'opendap package = ' + self.get_opendap_package(),
         msg = msg0 + msg
 
@@ -1305,48 +1267,76 @@ class balto_gui:
         # Show message in downloads panel log box
         #------------------------------------------
         msg_str = self.list_to_string( msg )
-        self.download_log_box.value = msg_str
+        self.download_log.value = msg_str
 
     #   print_choices()
     #--------------------------------------------------------------------
     def download_data(self, caller_obj=None):
 
- 
+        #-------------------------------------------------
+        # Note: After a reset, self still has a dataset,
+        #       but short_name was reset to ''.
+        #-------------------------------------------------
+        short_name = self.get_var_shortname()
+        if (short_name == ''):
+            msg = 'Sorry, no variable has been selected.'
+            self.download_log.value = msg
+            return
+
         #----------------------------------------------------
         # Note: This is called by the "on_click" method of
         # the "Go" button beside the Dropdown of filenames.
         # In this case, type(caller_obj) =
         # <class 'ipywidgets.widgets.widget_button.Button'>
         #----------------------------------------------------
-        ## status  = self.download_status_box
-        ## log_box = self.download_log_box
-        ## log_box.value = 'Download button clicked.'
+        ## status = self.download_status
         self.print_choices()
         #----------------------------------------------
         # print_choices() already displayed error msg
         #----------------------------------------------
         if not(hasattr(self, 'dataset')):
             return
-            
-        #--------------------------------------------
-        # Is there a lat variable ?  If so, use lat
-        # range selected in GUI to clip the data.
-        #--------------------------------------------
+ 
+        #----------------------------------------           
+        # Get names of the variables dimensions
+        #----------------------------------------
+        dim_list = self.dataset[ short_name ].dimensions
 
-        #--------------------------------------------
-        # Is there a lon variable ?  If so, use lon
-        # range selected in GUI to clip the data.
-        #--------------------------------------------
+        #--------------------------------------
+        # Uncomment to test other time_deltas
+        #------------------------------------------
+        # If test time_delta is too small, we'll
+        # get a start_index that is out of range.
+        #------------------------------------------
+        # self.time_delta = '0000-02-00 00:00:00'  # WORKED
+        # self.time_delta = '0000-00-30 12:00:00'  # WORKED
+        # self.time_delta = '0001-00-00 00:00:00'  # WORKED
 
         #----------------------------------------------
         # Is there a time variable ?  If so, use time
         # range selected in GUI to clip the data.
         #----------------------------------------------
-        time_index_range = self.get_new_time_index_range()
-        ti1 = time_index_range[0]
-        ti2 = time_index_range[1]
-        print('New time indices, ti1, ti2 =', ti1, ti2)
-           
+        (t_i1, t_i2) = self.get_new_time_index_range()
+        print('New time indices =', t_i1, t_i2)
+                    
+        #--------------------------------------------
+        # Is there a lat variable ?  If so, use lat
+        # range selected in GUI to clip the data.
+        # Default is the full range.
+        #--------------------------------------------
+        ## if ('lat' in dim_list):
+        (lat_i1, lat_i2) = self.get_new_lat_index_range()
+        print('New latitude indices =', lat_i1, lat_i2)
+            
+        #--------------------------------------------
+        # Is there a lon variable ?  If so, use lon
+        # range selected in GUI to clip the data.
+        # Default is the full range.
+        #--------------------------------------------
+        ## if ('lon' in dim_list):
+        (lon_i1, lon_i2) = self.get_new_lon_index_range()
+        print('New longitude indices =', lon_i1, lon_i2)
+
         #--------------------------------------        
         # Did user set a spatial resolution ?
         #--------------------------------------
@@ -1355,8 +1345,6 @@ class balto_gui:
         # Actually download the data here
         # to a variable in the notebook
         #-----------------------------------      
-        short_name = self.data_var_name.value
-        print()
         print('Downloading variable:', short_name, '...' )
         # Asynchronous download. How do we know its here?
         print('Variable saved in: balto.user_var')
@@ -1373,7 +1361,9 @@ class balto_gui:
         #-----------------------------------------------
         # Restrict array indices here, before download
         #-----------------------------------------------
-        grid = data_obj[ti1:ti2, :, :]   ############ ASSUMES time + 2D
+        ##### CURRENTLY ASSUMES DIMS (time, lat, lon)  #######
+        ## grid = data_obj[ti1:ti2, :, :]
+        grid = data_obj[t_i1:t_i2, lat_i1:lat_i2, lon_i1:lon_i2]
         var  = grid.array[:].data
         
         ## RECALL:  self.time_var = self.time_obj.data[:]
@@ -1437,6 +1427,14 @@ class balto_gui:
             msg = 'Unable to find times for this dataset.'
             self.datetime_notes.value = msg
             return
+
+        #-----------------------------------------            
+        # Show all time attributes in a droplist
+        #-----------------------------------------
+        time_att_list = self.get_time_attributes()
+        if (time_att_list is not None):
+            self.datetime_attributes.options = time_att_list
+
         #----------------------------------------------------
         # Compute the min and max times; save as time_range
         #----------------------------------------------------
@@ -1446,39 +1444,34 @@ class balto_gui:
         msg = 'Time range for this dataset = '
         msg += '(' + str(min_time) + ', ' + str(max_time) + ')'
         info.append( msg )
+
         #------------------------------------------------
         # Is there an attribute called "actual_range" ?
         #------------------------------------------------      
-        if (hasattr(self.time_obj, 'actual_range')):
-            range_str = str( self.time_obj.actual_range )
-            msg = 'Time "actual_range" is: ' + range_str
-            info.append( msg )
-            ### self.time_range = self.time_obj.actual_range
-        else:
-            msg = 'Unable to find "actual range" for times.'
-            self.datetime_notes.value = msg
-            return
+#         if not(hasattr(self.time_obj, 'actual_range')):
+#             msg = 'Unable to find "actual range" for times.'
+#             self.datetime_notes.value = msg
+#             return
+#         else:
+#             self.time_range = self.time_obj.actual_range
+
         #-----------------------------------------
         # Is there an attribute called "units" ?
         #-----------------------------------------
         if (hasattr(self.time_obj, 'units')):
             self.time_units = self.time_obj.units
-            msg = 'Time "units" are: ' + self.time_units
-            info.append( msg )
         else:
-            msg = 'Unable to find "units" for times.'
+            msg = 'Unable to find "units" for time.'
             self.datetime_notes.value = msg
             return
+
         #-------------------------------------------
         # Is there an attribute called "delta_t" ?
         # If so, assume it is in "datetime" form,
         # such as 00-01-00 00:00:00" for 1 month.
         #-------------------------------------------
         if (hasattr(self.time_obj, 'delta_t')):
-            # Assume this is a datetime string.
             self.time_delta = self.time_obj.delta_t
-            msg = 'Time "delta_t" is: ' + self.time_delta
-            info.append( msg )
         else:
             msg = 'Unable to find "delta_t" for times.'
             self.datetime_notes.value = msg
@@ -1593,13 +1586,40 @@ class balto_gui:
 
     #   get_end_datetime_obj()
     #--------------------------------------------------------------------  
-    def split_datetime_str(self, datetime_obj, datetime_sep=' '):
-      
+#     def get_dt_from_datetime_str(self, datetime_str):
+# 
+#         #-------------------------------------------------------  
+#         # Notes:  May not need this.  Not finished.
+#         #         If possible, it will be more powerful/general
+#         #         to work with dt as a datetime string.
+#         #         e.g. dt could be 3 days, or 3.5 days, etc.
+#         #-------------------------------------------------------
+#         # type(datetime_obj) = "<class 'datetime.datetime'>"
+#         # type(datetime_str) = "<class 'str'>"
+#         #----------------------------------------------------- 
+#         # Convert to string if passed datetime_obj.
+#         #-----------------------------------------------------     
+#         dt_str = str(datetime_str)
+#         (y,m1,d,h,m2,s) = self.split_datetime_str( dt_str, ALL=True )
+#           
+#     #   get_dt_from_datetime_str()
+    #--------------------------------------------------------------------  
+    def split_datetime_str(self, datetime_obj, datetime_sep=' ',
+                           ALL=False):
+ 
+        #-----------------------------------------------     
+        # Note: Still works if datetime_obj is string.
+        #-----------------------------------------------
         datetime_str = str(datetime_obj)
         parts = datetime_str.split( datetime_sep )
         date_str = parts[0]
         time_str = parts[1]
-        return (date_str, time_str)
+        if not(ALL):
+            return (date_str, time_str)
+        else:
+            (y,m1,d) = self.split_date_str( date_str )
+            (h,m2,s) = self.split_time_str( time_str )
+            return (y,m1,d,h,m2,s)
 
     #   split_datetime_str()
     #--------------------------------------------------------------------  
@@ -1695,16 +1715,11 @@ class balto_gui:
     #   get_month_difference()
     #--------------------------------------------------------------------    
     def get_new_time_index_range(self):
- 
-        # (start_date, start_time) = self.get_start_datetime()
-        # (end_date, end_time)     = self.get_end_datetime()
-        # start_datetime_str = (start_date + ' ' + start_time)
-        # end_datetime_str   = (end_date   + ' ' + end_time)
 
         if not(hasattr(self, 'origin_datetime_str')):
             print('Sorry, origin datetime is not set.')
             nt = len(self.time_var)
-            return [0, nt - 1]  # (unrestricted by choices) 
+            return (0, nt - 1)  # (unrestricted by choices) 
 
         #--------------------------------------------------------
         # Get min possible datetime, from time_vars.min().
@@ -1720,57 +1735,234 @@ class balto_gui:
         start_datetime_obj  = self.get_start_datetime_obj()
         end_datetime_obj    = self.get_end_datetime_obj()
 
-#         start_date_obj = self.datetime_start_date.value
-#         start_time_str = self.datetime_start_time.value
-#         start_time_obj = datetime.datetime.strptime(start_time_str, '%H:%M:%S').time()
-#         start_datetime_obj = datetime.datetime.combine( start_date_obj, start_time_obj )
-#         ## self.replace_time_in_datetime_obj( start_date_obj, start_time_str)
-#         #-------------------------------------------------------------------        
-#         end_date_obj   = self.datetime_end_date.value
-#         end_time_str   = self.datetime_end_time.value
-#         end_time_obj   = datetime.datetime.strptime(end_time_str, '%H:%M:%S').time()
-#         end_datetime_obj = datetime.datetime.combine( end_date_obj, end_time_obj )
-#         ## self.replace_time_in_datetime_obj( end_date_obj, end_time_str)
-#         #-------------------------------------------------------------------         
-#         odt_str     = self.origin_datetime_str
-#         days_since1 = self.get_days_since_from_datetime(start_datetime_obj, odt_str)
-#         days_since2 = self.get_days_since_from_datetime(end_datetime_obj,   odt_str)
+        #---------------------------------------------------     
+        # Convert dt datetime string to "timedelta" object
+        # e.g. 00-01-00 00:00:00
+        #---------------------------------------------------
+        # Note: datetime.timedelta() does not do "months",
+        #       since they're not a fixed number of days,
+        #       so we use "get_month_difference()".  Also
+        #       it does not have a "years" argument.
+        #---------------------------------------------------
+        USE_LOOPS = True
+        (y,m1,d,h,m2,s) = self.split_datetime_str(self.time_delta, ALL=True)
+        ## print('time_delta =', self.time_delta )
+        ## print('y, m1, d, h, m2, s =', y, m1, d, h, m2, s )
+        if (m1 == 0):
+            d = (y*365) + d   # python int(), not 2-byte int.
+            # print('days =', d)
+            dt_timedelta_obj = datetime.timedelta(days=d, hours=h, minutes=m2, seconds=s)
+        elif (m1 > 0 and (y+d+h+m2+s == 0)):
+            n_months1 = self.get_month_difference( min_datetime_obj, start_datetime_obj  )
+            n_months2 = self.get_month_difference( min_datetime_obj, end_datetime_obj  )
+            start_index = int(n_months1 / m1)
+            end_index   = int(n_months2 / m1)
+            USE_LOOPS   = False
+        else:
+            # Note: I think there is a "monthdelta" package ?
+            #       Or we may be able to use dateutils.
+            print('ERROR: Cannot handle this dt case yet.')
+            return None
 
-        # Not needed for current problem.
-#         days_since1 = self.get_days_since_from_datetime(start_datetime_obj)
-#         days_since2 = self.get_days_since_from_datetime(end_datetime_obj)
-        
-        n_months1 = self.get_month_difference( min_datetime_obj, start_datetime_obj  )
-        n_months2 = self.get_month_difference( min_datetime_obj, end_datetime_obj  )
-        start_index = n_months1
-        end_index   = n_months2
-       
-        #--------------------------------------------------        
-        # Subtract the min of days_since, from time_range
-        #--------------------------------------------------
-#         days_since_min = self.time_range[0]       
-#         start_index = (days_since1 - days_since_min)
-#         end_index   = (days_since2 - days_since_min)
-#         print('odt_str =', odt_str)
-#         print('days_since_min =', days_since_min)
-#         print('days_since1    =', days_since1)
-#         print('days_since2    =', days_since2)
-                
+        #-------------------------------------------------        
+        # Compute start and end index into time array.
+        # General method, if delta_t is datetime string.
+        #-------------------------------------------------
+        if (USE_LOOPS):
+            start_index = 0
+            print('min_datetime_str =', str(min_datetime_obj) )
+            print('dt_timedelta_str =', dt_timedelta_obj )
+            next = copy.copy( min_datetime_obj )
+            while (True):
+                next = (next + dt_timedelta_obj)
+                ## print('next =', str(next))
+                if (next < start_datetime_obj):
+                    start_index += 1
+                else: break
+            #-------------------------------------------------
+            end_index = 0
+            next = copy.copy( min_datetime_obj )
+            while (True):
+                next = (next + dt_timedelta_obj)
+                if (next < end_datetime_obj):
+                    end_index += 1
+                else: break           
+        #-------------------------------------------------                    
         nt = len( self.time_var )
         start_index = max(0, start_index)
         end_index   = min(end_index, nt-1)
-        
+
+        #---------------------------------------
+        # User time period may be smaller than
+        # time spacing (dt).
+        #---------------------------------------        
+        if (start_index == end_index):
+            end_index = start_index + 1
+        return (start_index, end_index)
+                     
+        # Not needed for current problem.
+        # days_since1 = self.get_days_since_from_datetime(start_datetime_obj)
+        # days_since2 = self.get_days_since_from_datetime(end_datetime_obj)
+       
+        # For testing
         # print('type(start_index) =', type(start_index) )
         # print('type(end_index)   =', type(end_index) )
         # print('start_index =', start_index)
         # print('end_index   =', end_index)
         # print('n_times     =', nt)
-
-        return [start_index, end_index]
+        # return (start_index, end_index)
         
     #   get_new_time_index_range()
     #--------------------------------------------------------------------
-    def get_duration(start_date=None, start_time=None,
+    def get_new_lat_index_range(self):
+       
+        short_name = self.get_var_shortname()
+        dim_list = self.dataset[ short_name ].dimensions
+        if not('lat' in dim_list):
+            print('Sorry, "lat" dimension not found.')
+            return None
+
+        #-------------------------------------------- 
+        # Are lats for grid cell edges or centers ?
+        #-------------------------------------------- 
+        att_dict = self.dataset['lat'].attributes
+        ADD1 = False
+        if ('coordinate_defines' in att_dict.keys() ):
+            if (att_dict['coordinate_defines'] == 'center'):
+                ADD1 = True
+            
+        #----------------------------------        
+        # Set default min and max indices
+        #----------------------------------
+        shape  = self.dataset[ short_name ].shape
+        lat_i1 = 0
+        lat_i2 = (shape[1] - 1)  ### assume 2nd slot in shape
+
+        #------------------------------------
+        # Get user-select minlat and maxlat
+        #------------------------------------
+        minlat = self.map_minlat.value
+        maxlat = self.map_maxlat.value
+
+        #----------------------------------       
+        # Get the array of lats, and info
+        #----------------------------------  
+        lats     = self.dataset[ 'lat' ]
+        nlats    = len(lats)
+        v_minlat = min(lats)  ## does this cause download? use actual_range?
+        v_maxlat = max(lats)
+        v_latdif = (v_maxlat - v_minlat)
+        if (ADD1):  v_latdif += 1
+        v_dlat   = (v_latdif / nlats)
+       
+        #--------------------------------------
+        # Compute the new, restricted indices
+        #-------------------------------------- 
+        lat_i1 = int( (minlat - v_minlat) / v_dlat )
+        lat_i2 = int( (maxlat - v_minlat) / v_dlat )
+        
+        print()
+        print('nlats    =', nlats)
+        print('v_minlat =', v_minlat)
+        print('v_maxlat =', v_maxlat)
+        print('v_dlat   =', v_dlat)
+        print('lat_i1   =', lat_i1)
+        print('lat_i2   =', lat_i2)
+
+        #---------------------------------------- 
+        lat_i1 = min( max(lat_i1, 0), nlats-1 )
+        lat_i2 = min( max(lat_i2, 0), nlats-1 )
+        #------------------------------------------
+        # User region may be smaller than v_dlat,
+        # as is the case with Puerto Rico, where
+        # data grid cells are 1 deg x 1 deg or so.
+        #------------------------------------------        
+        if (lat_i1 == lat_i2):
+            lat_i2 = lat_i1 + 1
+                    
+        return (lat_i1, lat_i2)
+
+    #   get_new_lat_index_range()
+    #--------------------------------------------------------------------
+    def get_new_lon_index_range(self):
+
+        short_name = self.get_var_shortname() 
+        dim_list = self.dataset[ short_name ].dimensions
+        if not('lon' in dim_list):
+            print('Sorry, "lon" dimension not found.')
+            return None
+
+        #-------------------------------------------- 
+        # Are lats for grid cell edges or centers ?
+        #-------------------------------------------- 
+        att_dict = self.dataset['lon'].attributes
+        ADD1 = False
+        if ('coordinate_defines' in att_dict.keys() ):
+            if (att_dict['coordinate_defines'] == 'center'):
+                ADD1 = True
+            
+        #----------------------------------        
+        # Set default min and max indices
+        #----------------------------------
+        shape  = self.dataset[ short_name ].shape
+        lon_i1 = 0
+        lon_i2 = (shape[2] - 1)  ### assume 3rd slot in shape
+
+        #------------------------------------
+        # Get user-select minlat and maxlat
+        #------------------------------------
+        minlon = self.map_minlon.value
+        maxlon = self.map_maxlon.value
+
+        #----------------------------------       
+        # Get the array of lats, and info
+        #----------------------------------  
+        lons     = self.dataset[ 'lon' ]
+        nlons    = len(lons)
+        v_minlon = min(lons)  ## does this cause download? use actual_range?
+        v_maxlon = max(lons)
+        v_londif = (v_maxlon - v_minlon)
+        if (ADD1):  v_londif += 1
+        v_dlon   = (v_londif / nlons)
+
+        #------------------------------------------
+        # Are the lons in [0,360] or [-180,180] ?
+        #------------------------------------------
+        if (v_maxlon > 180.0):
+            v_minlon = (v_minlon - 180.0)
+            v_maxlon = (v_maxlon - 180.0)    
+        if (minlon > 180.0):
+            minlon = (minlon - 180.0) 
+            maxlon = (maxlon - 180.0)
+      
+        #--------------------------------------
+        # Compute the new, restricted indices
+        #-------------------------------------- 
+        lon_i1 = int( (minlon - v_minlon) / v_dlon )
+        lon_i2 = int( (maxlon - v_minlon) / v_dlon )
+  
+        print()
+        print('nlons    =', nlons)
+        print('v_minlon =', v_minlon)
+        print('v_maxlon =', v_maxlon)
+        print('v_dlon   =', v_dlon)
+        print('lon_i1   =', lon_i1)
+        print('lon_i2   =', lon_i2)
+        #---------------------------------------- 
+        lon_i1 = min( max(lon_i1, 0), nlons-1 )
+        lon_i2 = min( max(lon_i2, 0), nlons-1 )
+        #------------------------------------------
+        # User region may be smaller than v_dlat,
+        # as is the case with Puerto Rico, where
+        # data grid cells are 1 deg x 1 deg or so.
+        #------------------------------------------        
+        if (lon_i1 == lon_i2):
+            lon_i2 = lon_i1 + 1
+        return (lon_i1, lon_i2)
+
+    #   get_new_lon_index_range()
+    #--------------------------------------------------------------------
+    def get_duration(self, start_date=None, start_time=None,
                      end_date=None, end_time=None,
                      dur_units=None, REPORT=False):
                  
