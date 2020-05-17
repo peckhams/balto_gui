@@ -1829,10 +1829,12 @@ class balto_gui:
         #---------------------------------------------------
         # datetime.timedelta has limits on inputs, e.g.
         # numpy.int32 is unsupported time for seconds arg.
-        # So here we adjust big numbers for timedelta.      
+        # So here we adjust big numbers for timedelta.
+        # The days argument can handle really big numbers.     
         #---------------------------------------------------     
         units = self.time_units  # ('days', 'hours', etc.)
-        n_per_day = {'seconds':86400.0, 'minutes':1440.0, 'hours':24.0}
+        n_per_day = {'seconds':86400.0, 'minutes':1440.0,
+                     'hours':24.0, 'days':1.0}
         if (time_since > 32767):
             time_since = time_since / n_per_day[ units ]
             units = 'days'  # (new units)
@@ -2076,13 +2078,16 @@ class balto_gui:
         short_name = self.get_var_shortname()
         dim_list = self.dataset[ short_name ].dimensions
         lat_name = None
-        lat_name_list = ['lat', 'LAT', 'coadsy', 'COADSY']
+        lat_name_list = ['lat', 'LAT', 'coadsy', 'COADSY',
+                         'latitude', 'LATITUDE']
         for lat_name in lat_name_list:
             if (lat_name in dim_list):
                 break
         if (lat_name is None):
-            print('Sorry, could not find a "latitude" dimension.')
-            print('Checked: "lat", "LAT", "coadsy", "COADSY".')
+            msg1 = 'Sorry, could not find a "latitude" dimension.'
+            msg2 = 'Checked: lat, LAT, coadsy, COADSY,'
+            msg3 = '   latitude and LATITUDE.'
+            self.append_download_log( [msg1, msg2, msg3] )
             return None
 
         #-------------------------------------------- 
@@ -2154,13 +2159,16 @@ class balto_gui:
         short_name = self.get_var_shortname() 
         dim_list = self.dataset[ short_name ].dimensions
         lon_name = None
-        lon_name_list = ['lon', 'LON', 'coadsx', 'COADSX']
+        lon_name_list = ['lon', 'LON', 'coadsx', 'COADSX',
+                         'longitude', 'LONGITUDE']
         for lon_name in lon_name_list:
             if (lon_name in dim_list):
                 break
         if (lon_name is None):
-            print('Sorry, could not find a "longitude" dimension.')
-            print('Checked: "lon", "LON", "coadsx", "COADSX".')
+            msg1 = 'Sorry, could not find a "longitude" dimension.'
+            msg2 = 'Checked: lon, LON, coadsx, COADSX,'
+            msg3 = '   longitude and LONGITUDE.'
+            self.append_download_log( [msg1, msg2, msg3] )
             return None
 
         #-------------------------------------------- 
