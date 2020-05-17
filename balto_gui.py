@@ -49,11 +49,9 @@ import copy
 #      replace_map_bounds2()
 #      update_map_bounds()
 #      zoom_out_to_new_bounds()
-#      get_variable_name()
 #      get_opendap_package()
 #      get_download_format()
 #      pix_str()
-#      list_to_string()   # for multi-line messages
 #      get_url_dir_filenames()
 #      update_filename_list()
 #      get_opendap_file_url()
@@ -77,11 +75,19 @@ import copy
 #      get_abbreviated_var_name()
 #      get_possible_svo_names()
 #      ----------------------------
-#      print_choices()
+#      clear_download_log()
+#      append_download_log()
+#      print_user_choices()
 #      download_data()
 #      show_grid()
 #      -------------------------------
 #      update_datetime_panel()
+#      clear_datetime_notes()
+#      append_datetime_notes()
+#      list_to_string()
+#      -------------------------------
+#      pad_with_zeros()
+#      get_time_delta_str()
 #      get_datetime_obj_from_str()
 #      get_start_datetime_obj()
 #      get_end_datetime_obj()
@@ -821,15 +827,6 @@ class balto_gui:
         return str(num) + 'px'
 
     #--------------------------------------------------------------------
-    def list_to_string( self, array ):
-
-        s = ''
-        for item in array:
-            s = s + item + '\n'
-        return s
-
-    #   list_to_string()
-    #--------------------------------------------------------------------
     def get_url_dir_filenames(self):
  
         #-----------------------------------------       
@@ -934,14 +931,23 @@ class balto_gui:
         #-------------------------------------------
         self.data_var_name.options = short_names
         self.data_var_name.value   = short_names[0]    
-#         self.data_var_name.options = long_names
-#         self.data_var_name.value   = long_names[0]
 
         #------------------------------------
         # Show other info for this variable
         #------------------------------------
         self.update_var_info()
-   
+        self.clear_download_log()  #####
+ 
+        #-------------------------------------------
+        # Try to show map extent in map panel
+        #-------------------------------------------
+        #### self.update_map_panel()
+        
+        #-------------------------------------------
+        # Try to show date range in datetime panel
+        #-------------------------------------------
+        self.update_datetime_panel()  # clears notes, too
+                  
     #   update_data_panel() 
     #--------------------------------------------------------------------
     def update_var_info(self, change=None):
@@ -977,12 +983,7 @@ class balto_gui:
         self.data_var_dims.value      = dims
         self.data_var_type.value      = dtype
         self.data_var_atts.options    = atts
-
-        #-------------------------------------------
-        # Try to show date range in datetime panel
-        #-------------------------------------------
-        self.update_datetime_panel()
-        
+    
     #   update_var_info()
     #--------------------------------------------------------------------  
     def get_all_var_shortnames(self):
@@ -1233,13 +1234,31 @@ class balto_gui:
     
     #   get_possible_svo_names()
     #--------------------------------------------------------------------
-    #--------------------------------------------------------------------   
-    def print_choices(self):
+    def clear_download_log(self):
+    
+        self.download_log.value = ''
 
-        if (hasattr(self, 'dataset')):
-           msg0 = []
+    #   clear_download_log()
+    #--------------------------------------------------------------------
+    def append_download_log(self, msg):
+    
+        ## type_str = str( type(msg) )
+        ## if (type_str == "<class 'list'>"):
+        
+        if (isinstance( msg, list)):
+            for string in msg:
+                self.download_log.value += (string + '\n')
         else:
-           msg0 = ['ERROR: No dataset has been selected.']
+            self.download_log.value += (msg + '\n')
+
+    #   append_download_log()
+    #--------------------------------------------------------------------   
+    def print_user_choices(self):
+
+        if not(hasattr(self, 'dataset')):
+           msg = 'ERROR: No dataset has been selected.'
+           self.append_download_log( msg )
+           return  ############
        
         start_datetime_obj = self.get_start_datetime_obj()
         ### (start_date, start_time) = self.split_datetime_str
@@ -1249,27 +1268,20 @@ class balto_gui:
         end_datetime_obj = self.get_end_datetime_obj()
         end_date = str( end_datetime_obj.date() )
         end_time = str( end_datetime_obj.time() )
-                
-#         (start_date, start_time) = self.get_start_datetime()
-#         (end_date, end_time)     = self.get_end_datetime()
-        
-        msg = [
-        'var short name  = ' + self.get_var_shortname(),
-        'download format = ' + self.get_download_format(),
-        'map bounds = ' + str(self.get_map_bounds( FROM_MAP=False )),
-        ## 'bounds = ' + str(self.get_map_bounds()),
-        'start date and time = ' + start_date + ' ' + start_time,
-        'end date and time   = ' + end_date   + ' ' + end_time ]
-        ## 'opendap package = ' + self.get_opendap_package(),
-        msg = msg0 + msg
-
+ 
         #------------------------------------------        
         # Show message in downloads panel log box
-        #------------------------------------------
-        msg_str = self.list_to_string( msg )
-        self.download_log.value = msg_str
+        #------------------------------------------       
+        msg1 = 'var short name  = ' + self.get_var_shortname()
+        msg2 = 'download format = ' + self.get_download_format()
+        msg3 = 'map bounds = ' + str(self.get_map_bounds( FROM_MAP=False ))
+        msg4 = 'start date and time = ' + start_date + ' ' + start_time
+        msg5 = 'end date and time   = ' + end_date   + ' ' + end_time
+        ## msg6 = 'opendap package = ' + self.get_opendap_package()
+        msgs = [msg1, msg2, msg3, msg4, msg5]
+        self.append_download_log( msgs )
 
-    #   print_choices()
+    #   print_user_choices()
     #--------------------------------------------------------------------
     def download_data(self, caller_obj=None):
 
@@ -1290,10 +1302,10 @@ class balto_gui:
         # <class 'ipywidgets.widgets.widget_button.Button'>
         #----------------------------------------------------
         ## status = self.download_status
-        self.print_choices()
-        #----------------------------------------------
-        # print_choices() already displayed error msg
-        #----------------------------------------------
+        self.print_user_choices()
+        #--------------------------------------------------
+        # print_user_choices() already displayed error msg
+        #--------------------------------------------------
         if not(hasattr(self, 'dataset')):
             return
  
@@ -1315,27 +1327,22 @@ class balto_gui:
         #----------------------------------------------
         # Is there a time variable ?  If so, use time
         # range selected in GUI to clip the data.
-        #----------------------------------------------
-        (t_i1, t_i2) = self.get_new_time_index_range()
-        print('New time indices =', t_i1, t_i2)
-                    
+        #---------------------------------------------- 
+        (t_i1, t_i2) = self.get_new_time_index_range( REPORT=True)
+           
         #--------------------------------------------
         # Is there a lat variable ?  If so, use lat
         # range selected in GUI to clip the data.
         # Default is the full range.
         #--------------------------------------------
-        ## if ('lat' in dim_list):
-        (lat_i1, lat_i2) = self.get_new_lat_index_range()
-        print('New latitude indices =', lat_i1, lat_i2)
+        (lat_i1, lat_i2) = self.get_new_lat_index_range( REPORT=True)
             
         #--------------------------------------------
         # Is there a lon variable ?  If so, use lon
         # range selected in GUI to clip the data.
         # Default is the full range.
         #--------------------------------------------
-        ## if ('lon' in dim_list):
-        (lon_i1, lon_i2) = self.get_new_lon_index_range()
-        print('New longitude indices =', lon_i1, lon_i2)
+        (lon_i1, lon_i2) = self.get_new_lon_index_range( REPORT=True)
 
         #--------------------------------------        
         # Did user set a spatial resolution ?
@@ -1348,7 +1355,8 @@ class balto_gui:
         print('Downloading variable:', short_name, '...' )
         # Asynchronous download. How do we know its here?
         print('Variable saved in: balto.user_var')
-        
+        print()
+
         #---------------------------------------------        
         # Convert reference to actual numpy variable
         # which causes it to be downloaded, and then
@@ -1412,7 +1420,8 @@ class balto_gui:
     #--------------------------------------------------------------------
     def update_datetime_panel(self):
  
-        info = []
+        self.clear_datetime_notes()  # erase notes
+
         #-----------------------------------------
         # Are there any times for this dataset ?
         #-----------------------------------------
@@ -1425,7 +1434,7 @@ class balto_gui:
             self.time_var = self.time_obj.data[:]
         else:
             msg = 'Unable to find times for this dataset.'
-            self.datetime_notes.value = msg
+            self.append_datetime_notes( msg )
             return
 
         #-----------------------------------------            
@@ -1443,7 +1452,7 @@ class balto_gui:
         self.time_range = [min_time, max_time]
         msg = 'Time range for this dataset = '
         msg += '(' + str(min_time) + ', ' + str(max_time) + ')'
-        info.append( msg )
+        self.append_datetime_notes( msg )
 
         #------------------------------------------------
         # Is there an attribute called "actual_range" ?
@@ -1458,11 +1467,16 @@ class balto_gui:
         #-----------------------------------------
         # Is there an attribute called "units" ?
         #-----------------------------------------
+        # The full string may be something like:
+        #   hour since 0000-01-01 00:00:00
+        # Save both full string and just units.
+        #-----------------------------------------
         if (hasattr(self.time_obj, 'units')):
-            self.time_units = self.time_obj.units
+            self.time_units_str = self.time_obj.units
+            self.get_actual_time_units() # (set self.time_units)
         else:
             msg = 'Unable to find "units" for time.'
-            self.datetime_notes.value = msg
+            self.append_datetime_notes( msg )
             return
 
         #-------------------------------------------
@@ -1473,51 +1487,203 @@ class balto_gui:
         if (hasattr(self.time_obj, 'delta_t')):
             self.time_delta = self.time_obj.delta_t
         else:
-            msg = 'Unable to find "delta_t" for times.'
-            self.datetime_notes.value = msg
+            self.time_delta = self.get_time_delta_str()
+            #-------------------------------------------
+            ## msg = 'Unable to find "delta_t" for times.'
+            ## self.datetime_notes.value = msg
+            ## return
+
+        #---------------------------------------------------
+        # Are time units given as "time since" some date ?
+        #---------------------------------------------------
+        # Sample data has cases with:
+        # 'days since', 'hour since' (vs hours), 'seconds since'
+        #--------------------------------------------------------
+        # Already saved "time_units_str" AND "time_units" above.
+        # strip() removes leading and trailing whitespace
+        #--------------------------------------------------------        
+        time_units_str = self.time_units_str
+        if ('since' not in time_units_str):
+            msg = 'Time units string has no "since" part.'
+            self.append_datetime_notes( msg )
             return
-        #---------------------------------------------------
-        # Are time units given as "days since" some date ?
-        #---------------------------------------------------
-        s = self.time_units
-        if (s.startswith('days since ')):
-            #-------------------------------------
-            # Process the "origin" date and time
-            #-------------------------------------
-            n = len('days since ')
-            odt = s[n:]
-            self.origin_datetime_str = odt
-            (date_str, time_str) = self.split_datetime_str( odt )
-            self.origin_datetime_obj = self.get_datetime_obj_from_str( date_str, time_str)
-            #---------------------------------------------
-            # Now process "days since" for start and end
-            #---------------------------------------------
-            days_since1    = self.time_range[0]
-            days_since2    = self.time_range[1]
-            start_datetime_obj = self.get_datetime_from_days_since(days_since1)
-            end_datetime_obj   = self.get_datetime_from_days_since(days_since2)
-            start_datetime_str = str(start_datetime_obj)
-            end_datetime_str   = str(end_datetime_obj)
-            (start_date, start_time) = self.split_datetime_str( start_datetime_str )
-            (end_date, end_time)     = self.split_datetime_str( end_datetime_str )
-            #-----------------------------------------------------------
-            # Be sure to set date values as date_obj, not datetime_obj
-            #-----------------------------------------------------------
-            self.datetime_start_date.value = start_datetime_obj.date()
-            self.datetime_end_date.value   = end_datetime_obj.date()
-            self.datetime_start_time.value = start_time
-            self.datetime_end_time.value   = end_time
-            #----------------------------------
-            # This also works, but more steps
-            #----------------------------------
-            # (y1,m1,d1) = self.split_date_str( start_date )
-            # (y2,m2,d2) = self.split_date_str( end_date )
-            # self.datetime_start_date.value = datetime.date(y1, m1, d1)
-            # self.datetime_end_date.value   = datetime.date(y2, m2, d2)  
 
-        self.datetime_notes.value = self.list_to_string( info )
-
+        #-------------------------------------
+        # Process the "origin" date and time
+        #-------------------------------------
+        parts = time_units_str.split('since')
+        odt   = parts[1].strip()
+        self.origin_datetime_str = odt
+        (date_str, time_str) = self.split_datetime_str( odt )
+        if (date_str.startswith('0000')):
+            msg = 'Warning: "Since" year must be > 0, changing to 1.'
+            self.append_datetime_notes( msg )
+            date_str = date_str[:3] + '1' + date_str[4:]
+        self.origin_datetime_obj = self.get_datetime_obj_from_str( date_str, time_str)
+        #---------------------------------------------
+        # Now process time_since for start and end
+        #---------------------------------------------
+        time_since1    = self.time_range[0]
+        time_since2    = self.time_range[1]
+        start_datetime_obj = self.get_datetime_from_time_since(time_since1)
+        end_datetime_obj   = self.get_datetime_from_time_since(time_since2)
+        # start_datetime_obj = self.get_datetime_from_days_since(days_since1)
+        # end_datetime_obj   = self.get_datetime_from_days_since(days_since2)
+        start_datetime_str = str(start_datetime_obj)
+        end_datetime_str   = str(end_datetime_obj)
+        (start_date, start_time) = self.split_datetime_str( start_datetime_str )
+        (end_date, end_time)     = self.split_datetime_str( end_datetime_str )
+        #-----------------------------------------------------------
+        # Be sure to set date values as date_obj, not datetime_obj
+        #-----------------------------------------------------------
+        self.datetime_start_date.value = start_datetime_obj.date()
+        self.datetime_end_date.value   = end_datetime_obj.date()
+        self.datetime_start_time.value = start_time
+        self.datetime_end_time.value   = end_time
+        #----------------------------------
+        # This also works, but more steps
+        #----------------------------------
+        # (y1,m1,d1) = self.split_date_str( start_date )
+        # (y2,m2,d2) = self.split_date_str( end_date )
+        # self.datetime_start_date.value = datetime.date(y1, m1, d1)
+        # self.datetime_end_date.value   = datetime.date(y2, m2, d2)  
+        
     #   update_datetime_panel()
+    #--------------------------------------------------------------------    
+    def clear_datetime_notes(self):
+
+        self.datetime_notes.value = ''
+
+    #   clear_datetime_notes()
+    #--------------------------------------------------------------------    
+    def append_datetime_notes(self, msg):
+
+        self.datetime_notes.value += (msg + '\n')
+
+    #   append_datetime_notes()
+    #--------------------------------------------------------------------
+#     def list_to_string( self, array ):
+# 
+#         s = ''
+#         for item in array:
+#             s = s + item + '\n'
+#         return s
+# 
+#     #   list_to_string()
+    #--------------------------------------------------------------------
+    def pad_with_zeros(self, num, target_len):
+      
+        num_string = str( int(num) )  # int removes decimal part
+        n = len( num_string )
+        m = (target_len - n)
+        num_string = ('0'*m) + num_string
+        return num_string
+ 
+    #   pad_with_zeros()
+    #--------------------------------------------------------------------
+    def get_actual_time_units(self):
+
+#         secs_per_unit_list = [1, 60.0, 3600.0, 86400, 31536000.0, -1]
+#         next_unit_factor = [60.0, 60.0, 24.0, 365.0, -1, -1]
+
+        units_list = ['second', 'minute', 'hour',
+                       'day', 'year', 'None']   # ascending, skip month
+
+        for units in units_list:
+             if (self.time_units_str.startswith(units)):
+                 break
+        if (units != None):
+            units += 's'   # (make units plural now; not before)
+        else:
+            print('ERROR: No match found for units.')
+            return
+        self.time_units = units
+
+    #   get_actual_time_units()
+    #--------------------------------------------------------------------
+    def get_time_delta_str(self):
+
+        #-----------------------------------
+        # Check size of the time_var array
+        #-----------------------------------
+        if (self.time_var.size == 1):
+            dt = 0
+            self.time_delta = None
+            return  # Don't need time_delta
+        if (self.time_var.size > 1):  
+            dt  = (self.time_var[1] - self.time_var[0])
+            print('dt1 =', dt)
+        if (self.time_var.size > 3):
+            dt2 = (self.time_var[2] - self.time_var[1])  ###
+            dt3 = (self.time_var[3] - self.time_var[2])  ###
+            print('dt2 =', dt2)  # check if evenly spaced
+            print('dt3 =', dt3)
+                
+        #---------------------------------------------------        
+        # Note: Actual time units were stripped from units
+        #       string and saved as self.time_units.
+        #       A full units attribute string may be:
+        #        'hour since 0000-00-00 00:00:00'
+        #---------------------------------------------------
+        units_list = ['seconds', 'minutes', 'hours',
+                      'days', 'years', 'None']  # ascending, skip month
+        secs_per_unit_list = [1, 60.0, 3600.0, 86400, 31536000.0, -1]
+        next_unit_factor   = [60.0, 60.0, 24.0, 365.0, -1, -1]
+        units       = self.time_units
+        units_index = units_list.index( units )
+        #----------------------------------------
+        if (units == 'years'):
+            s = self.pad_with_zeros(dt,4)
+        else:
+            if (len(str(dt)) <= 2):
+                s = self.pad_with_zeros(dt,2)
+            else:
+                #-------------------------------
+                # Must convert units to get dt
+                # down to 1 or 2 digits.
+                #-------------------------------
+                old_dt    = dt
+                old_units = units
+                k = units_index
+                n = len( str(int(dt)) )
+                while (n > 2) and (units != 'None'):
+                    k     = k + 1
+                    dt    = (dt / next_unit_factor[k-1])
+                    units = units_list[k]
+                    n     = len( str(int(dt)) )
+                if (units == 'None'):
+                    print('#####################################')
+                    print('ERROR in get_time_delta_str():')
+                    print('      dt has too many digits.')
+                    print('#####################################')
+                    return
+                else:
+                    # Note that any remainder has been dropped.
+                    s = self.pad_with_zeros(dt,2)
+                    print('Old dt and units =', old_dt, old_units)
+                    print('New dt and units =', dt, units)
+                    print('Remainder not retained yet.')
+        #----------------------------------------------
+        if (units == 'years'):
+            td = (s + '-00-00 00:00:00')
+#         if (units == 'months'):
+#             td= ('0000-' + s + '-00 00:00:00')
+        if (units == 'days'):
+            td = ('0000-00-' + s + ' 00:00:00')
+        if (units == 'hours'):
+            td = ('0000-00-00 ' + s + ':00:00')
+        if (units == 'minutes'):
+            td = ('0000-00-00 00:' + s + ':00')
+        if (units == 'seconds'):
+            td = ('0000-00-00 00:00:' + s)
+        #-------------------------------------------------------
+        # self.time_units = units   ######### DO THIS ?? #######
+        ######################################
+        self.time_delta = td
+        print('time_delta string =', td)
+        print()
+
+    #   get_time_delta_str()
     #--------------------------------------------------------------------
     def get_datetime_obj_from_str(self, date_str, time_str='00:00:00'):
 
@@ -1529,6 +1695,14 @@ class balto_gui:
    
         (y, m1, d) = self.split_date_str(date_str)
         (h, m2, s) = self.split_time_str(time_str)
+        if( y <= 0 ):
+            # msg  = 'Year cannot be < 1 in start date.\n'
+            # msg += 'Changed year from ' + str(y) + ' to 1.'
+            # self.datetime_notes.value = msg
+            print('Year cannot be < 1 in start date.')
+            print('Changed year from ' + str(y) + ' to 1.')
+            print()
+            y = 1
         datetime_obj = datetime.datetime(y, m1, d, h, m2, s) 
         return datetime_obj
         
@@ -1612,6 +1786,8 @@ class balto_gui:
         #-----------------------------------------------
         datetime_str = str(datetime_obj)
         parts = datetime_str.split( datetime_sep )
+        # print('## datetime_str =', datetime_str )
+        # print('## parts =', str(parts) )
         date_str = parts[0]
         time_str = parts[1]
         if not(ALL):
@@ -1643,36 +1819,108 @@ class balto_gui:
 
     #   split_time_str()
     #--------------------------------------------------------------------                       
-    def get_datetime_from_days_since(self, days_since):
+    def get_datetime_from_time_since(self, time_since):
+
+        # For testing
+#         print('## type(times_since) =', type(time_since) )
+#         print('## time_since =', time_since )
+#         print('## int(time_since) =', int(time_since) )
+        
+        #---------------------------------------------------
+        # datetime.timedelta has limits on inputs, e.g.
+        # numpy.int32 is unsupported time for seconds arg.
+        # So here we adjust big numbers for timedelta.      
+        #---------------------------------------------------     
+        units = self.time_units  # ('days', 'hours', etc.)
+        n_per_day = {'seconds':86400.0, 'minutes':1440.0, 'hours':24.0}
+        if (time_since > 32767):
+            time_since = time_since / n_per_day[ units ]
+            units = 'days'  # (new units)
+
+        #-------------------------------------------------
+        # Note: We now save self.time_units_str separate
+        #       from self.time_units.
+        #-------------------------------------------------
+        delta = None
+        if (units == 'days'):
+            delta = datetime.timedelta( days=time_since )
+        if (units == 'hours'):
+            delta = datetime.timedelta( hours=time_since )
+        if (units == 'minutes'):
+            delta = datetime.timedelta( minutes=time_since )
+        if (units == 'seconds'):
+            delta = datetime.timedelta( seconds=time_since )
+        #-----------------------------------------------------
+        if (delta is None):
+            msg = 'ERROR: Units: ' + units + ' not supported.'
+            self.append_datetime_notes( msg )
+            return
 
         #---------------------------------------------        
-        # Create new datetime object from days_since
+        # Create new datetime object from time_since
         #---------------------------------------------
         origin_obj = self.origin_datetime_obj
-        delta      = datetime.timedelta( days_since )
         new_dt_obj = (origin_obj + delta)
-        # print('new_dt_obj =', new_dt_obj)
-        # print('type(new_dt_obj) =', type(new_dt_obj))
-        # print('new_dt_obj =', net_dt_obj.strftime('%Y-%m-%d %H:%M:%S'))
-
         return new_dt_obj
+        
+        # For testing
+        ## print('origin_datetime_obj =', str(origin_obj) )
+        ## print('time_since delta    =', str(delta) )
+        ## print('new_dt_obj          =', str(new_dt_obj) ) 
+        ## return new_dt_obj
 
-    #   get_datetime_from_days_since()
+    #   get_datetime_from_time_since()
     #--------------------------------------------------------------------                       
-    def get_days_since_from_datetime(self, datetime_obj):
+    def get_time_since_from_datetime(self, datetime_obj, units='days'):
 
-        #------------------------------------------------
-        # Comput time duration between datetime objects
-        #------------------------------------------------
+        #-------------------------------------------------
+        # Compute time duration between datetime objects
+        #-------------------------------------------------
         origin_obj    = self.origin_datetime_obj
         duration_obj  = (datetime_obj - origin_obj)
-        duration_secs = duration_obj.total_seconds()        
-        duration_days = (duration_secs / 86400.0)
-        days_since    = duration_days
+        duration_secs = duration_obj.total_seconds()
+        #---------------------------------------------------
+        # There is not a fixed number of seconds per month
+        # Also 52 (weeks/year) * 7 (days/week) = 364.
+        #---------------------------------------------------
+        secs_per_unit_map = {
+        'years':31536000.0, 'weeks':604800.0, 'days':86400.0,
+        'hours':3600.0, 'minutes':60.0, 'seconds':1 }          
+        secs_per_unit = secs_per_unit_map[ units ]      
+        duration = (duration_secs / secs_per_unit )
+        time_since = duration  # (in units provided)
 
-        return days_since
-
-    #   get_days_since_from_datetime()
+        return time_since
+            
+    #   get_time_since_from_datetime()
+    #--------------------------------------------------------------------                       
+#     def get_datetime_from_days_since(self, days_since):
+# 
+#         #---------------------------------------------        
+#         # Create new datetime object from days_since
+#         #---------------------------------------------
+#         origin_obj = self.origin_datetime_obj
+#         delta      = datetime.timedelta( days_since )
+#         new_dt_obj = (origin_obj + delta)
+# 
+#         return new_dt_obj
+# 
+#     #   get_datetime_from_days_since()
+    #--------------------------------------------------------------------                       
+#     def get_days_since_from_datetime(self, datetime_obj):
+# 
+#         #------------------------------------------------
+#         # Comput time duration between datetime objects
+#         #------------------------------------------------
+#         origin_obj    = self.origin_datetime_obj
+#         duration_obj  = (datetime_obj - origin_obj)
+#         duration_secs = duration_obj.total_seconds()        
+#         duration_days = (duration_secs / 86400.0)
+#         days_since    = duration_days
+# 
+#         return days_since
+# 
+#     #   get_days_since_from_datetime()
     #-------------------------------------------------------------------- 
 #     def replace_time_in_datetime_obj(self, datetime_obj, time_str):
 #  
@@ -1714,26 +1962,27 @@ class balto_gui:
 
     #   get_month_difference()
     #--------------------------------------------------------------------    
-    def get_new_time_index_range(self):
+    def get_new_time_index_range(self, REPORT=True):
 
         if not(hasattr(self, 'origin_datetime_str')):
             print('Sorry, origin datetime is not set.')
             nt = len(self.time_var)
             return (0, nt - 1)  # (unrestricted by choices) 
 
-        #--------------------------------------------------------
+        #----------------------------------------------------
         # Get min possible datetime, from time_vars.min().
-        # Every time_var value is measured from "origin" (1800)
-        #--------------------------------------------------------
+        # Every time_var value is measured from an "origin"
+        # such as: '1800-01-01 00:00:00'
+        #----------------------------------------------------
         ## origin_datetime_obj = self.origin_datetime_obj
-        days_since_min = self.time_var.min()
-        min_datetime_obj  = self.get_datetime_from_days_since( days_since_min )
+        days_since_min   = self.time_var.min()
+        min_datetime_obj = self.get_datetime_from_time_since( days_since_min )
         
         #-----------------------------------------------        
         # Get current settings from the datetime panel
         #-----------------------------------------------
-        start_datetime_obj  = self.get_start_datetime_obj()
-        end_datetime_obj    = self.get_end_datetime_obj()
+        start_datetime_obj = self.get_start_datetime_obj()
+        end_datetime_obj   = self.get_end_datetime_obj()
 
         #---------------------------------------------------     
         # Convert dt datetime string to "timedelta" object
@@ -1786,18 +2035,26 @@ class balto_gui:
                 next = (next + dt_timedelta_obj)
                 if (next < end_datetime_obj):
                     end_index += 1
-                else: break           
-        #-------------------------------------------------                    
+                else: break
+                
+        #---------------------------------
+        # Make sure indices are in range
+        #---------------------------------                  
         nt = len( self.time_var )
         start_index = max(0, start_index)
         end_index   = min(end_index, nt-1)
-
         #---------------------------------------
         # User time period may be smaller than
         # time spacing (dt).
         #---------------------------------------        
         if (start_index == end_index):
             end_index = start_index + 1
+        
+        if (REPORT):
+            print('n_times =', nt)
+            print('New time indices =', start_index, ',', end_index)
+            print()
+
         return (start_index, end_index)
                      
         # Not needed for current problem.
@@ -1814,61 +2071,56 @@ class balto_gui:
         
     #   get_new_time_index_range()
     #--------------------------------------------------------------------
-    def get_new_lat_index_range(self):
+    def get_new_lat_index_range(self, REPORT=True):
        
         short_name = self.get_var_shortname()
         dim_list = self.dataset[ short_name ].dimensions
-        if not('lat' in dim_list):
-            print('Sorry, "lat" dimension not found.')
+        lat_name = None
+        lat_name_list = ['lat', 'LAT', 'coadsy', 'COADSY']
+        for lat_name in lat_name_list:
+            if (lat_name in dim_list):
+                break
+        if (lat_name is None):
+            print('Sorry, could not find a "latitude" dimension.')
+            print('Checked: "lat", "LAT", "coadsy", "COADSY".')
             return None
 
         #-------------------------------------------- 
         # Are lats for grid cell edges or centers ?
         #-------------------------------------------- 
-        att_dict = self.dataset['lat'].attributes
-        ADD1 = False
+        att_dict = self.dataset[ lat_name ].attributes
+        CENTERS = False
         if ('coordinate_defines' in att_dict.keys() ):
             if (att_dict['coordinate_defines'] == 'center'):
-                ADD1 = True
-            
-        #----------------------------------        
-        # Set default min and max indices
-        #----------------------------------
-        shape  = self.dataset[ short_name ].shape
-        lat_i1 = 0
-        lat_i2 = (shape[1] - 1)  ### assume 2nd slot in shape
+                CENTERS = True
 
         #------------------------------------
         # Get user-select minlat and maxlat
         #------------------------------------
-        minlat = self.map_minlat.value
-        maxlat = self.map_maxlat.value
+        user_minlat = self.map_minlat.value
+        user_maxlat = self.map_maxlat.value
 
         #----------------------------------       
         # Get the array of lats, and info
         #----------------------------------  
-        lats     = self.dataset[ 'lat' ]
-        nlats    = len(lats)
-        v_minlat = min(lats)  ## does this cause download? use actual_range?
-        v_maxlat = max(lats)
-        v_latdif = (v_maxlat - v_minlat)
-        if (ADD1):  v_latdif += 1
-        v_dlat   = (v_latdif / nlats)
+        lats   = self.dataset[ lat_name ]
+        nlats  = len(lats)
+        minlat = min(lats)  ## does this cause download? use actual_range?
+        maxlat = max(lats)
+        latdif = (maxlat - minlat)
+        if (CENTERS):
+            dlat = (latdif / (nlats - 1))
+        else:
+            dlat = (latdif / nlats)
        
         #--------------------------------------
         # Compute the new, restricted indices
         #-------------------------------------- 
-        lat_i1 = int( (minlat - v_minlat) / v_dlat )
-        lat_i2 = int( (maxlat - v_minlat) / v_dlat )
-        
-        print()
-        print('nlats    =', nlats)
-        print('v_minlat =', v_minlat)
-        print('v_maxlat =', v_maxlat)
-        print('v_dlat   =', v_dlat)
-        print('lat_i1   =', lat_i1)
-        print('lat_i2   =', lat_i2)
+        lat_i1 = int( (user_minlat - minlat) / dlat )
+        lat_i2 = int( (user_maxlat - minlat) / dlat )
 
+        #---------------------------------
+        # Make sure indices are in range
         #---------------------------------------- 
         lat_i1 = min( max(lat_i1, 0), nlats-1 )
         lat_i2 = min( max(lat_i2, 0), nlats-1 )
@@ -1879,75 +2131,84 @@ class balto_gui:
         #------------------------------------------        
         if (lat_i1 == lat_i2):
             lat_i2 = lat_i1 + 1
-                    
+ 
+        if (REPORT):
+            print('lat_name =', lat_name)
+            print('nlats    =', nlats)
+            print('minlat   =', minlat, '(var)' )
+            print('maxlat   =', maxlat, '(var)' )
+            print('dlat     =', dlat)
+            print('u_minlat =', user_minlat, '(user)' )
+            print('u_maxlat =', user_maxlat, '(user)' )        
+            print('lat_i1   =', lat_i1)
+            print('lat_i2   =', lat_i2)
+            print('New latitude indices =', lat_i1, ',', lat_i2)
+            print()
+            
         return (lat_i1, lat_i2)
 
     #   get_new_lat_index_range()
     #--------------------------------------------------------------------
-    def get_new_lon_index_range(self):
+    def get_new_lon_index_range(self, REPORT=True):
 
         short_name = self.get_var_shortname() 
         dim_list = self.dataset[ short_name ].dimensions
-        if not('lon' in dim_list):
-            print('Sorry, "lon" dimension not found.')
+        lon_name = None
+        lon_name_list = ['lon', 'LON', 'coadsx', 'COADSX']
+        for lon_name in lon_name_list:
+            if (lon_name in dim_list):
+                break
+        if (lon_name is None):
+            print('Sorry, could not find a "longitude" dimension.')
+            print('Checked: "lon", "LON", "coadsx", "COADSX".')
             return None
 
         #-------------------------------------------- 
         # Are lats for grid cell edges or centers ?
         #-------------------------------------------- 
-        att_dict = self.dataset['lon'].attributes
-        ADD1 = False
+        att_dict = self.dataset[ lon_name ].attributes
+        CENTERS = False
         if ('coordinate_defines' in att_dict.keys() ):
             if (att_dict['coordinate_defines'] == 'center'):
-                ADD1 = True
-            
-        #----------------------------------        
-        # Set default min and max indices
-        #----------------------------------
-        shape  = self.dataset[ short_name ].shape
-        lon_i1 = 0
-        lon_i2 = (shape[2] - 1)  ### assume 3rd slot in shape
+                CENTERS = True
 
         #------------------------------------
         # Get user-select minlat and maxlat
         #------------------------------------
-        minlon = self.map_minlon.value
-        maxlon = self.map_maxlon.value
+        user_minlon = self.map_minlon.value
+        user_maxlon = self.map_maxlon.value
 
         #----------------------------------       
         # Get the array of lats, and info
         #----------------------------------  
-        lons     = self.dataset[ 'lon' ]
-        nlons    = len(lons)
-        v_minlon = min(lons)  ## does this cause download? use actual_range?
-        v_maxlon = max(lons)
-        v_londif = (v_maxlon - v_minlon)
-        if (ADD1):  v_londif += 1
-        v_dlon   = (v_londif / nlons)
+        lons   = self.dataset[ lon_name ]
+        nlons  = len(lons)
+        minlon = min(lons)  ## does this cause download? use actual_range?
+        maxlon = max(lons)
+        londif = (maxlon - minlon)
+        if (CENTERS):
+            dlon = (londif / (nlons - 1))
+        else:
+            dlon = (londif / nlons)
 
         #------------------------------------------
         # Are the lons in [0,360] or [-180,180] ?
         #------------------------------------------
-        if (v_maxlon > 180.0):
-            v_minlon = (v_minlon - 180.0)
-            v_maxlon = (v_maxlon - 180.0)    
-        if (minlon > 180.0):
-            minlon = (minlon - 180.0) 
-            maxlon = (maxlon - 180.0)
+        if (maxlon > 180.0):
+            minlon = (minlon - 180.0)
+            maxlon = (maxlon - 180.0)    
+        if (user_minlon > 180.0):
+            user_minlon = (user_minlon - 180.0) 
+            user_maxlon = (user_maxlon - 180.0)
       
         #--------------------------------------
         # Compute the new, restricted indices
         #-------------------------------------- 
-        lon_i1 = int( (minlon - v_minlon) / v_dlon )
-        lon_i2 = int( (maxlon - v_minlon) / v_dlon )
-  
-        print()
-        print('nlons    =', nlons)
-        print('v_minlon =', v_minlon)
-        print('v_maxlon =', v_maxlon)
-        print('v_dlon   =', v_dlon)
-        print('lon_i1   =', lon_i1)
-        print('lon_i2   =', lon_i2)
+        lon_i1 = int( (user_minlon - minlon) / dlon )
+        lon_i2 = int( (user_maxlon - minlon) / dlon )
+         
+        #---------------------------------
+        # Make sure indices are in range
         #---------------------------------------- 
         lon_i1 = min( max(lon_i1, 0), nlons-1 )
         lon_i2 = min( max(lon_i2, 0), nlons-1 )
@@ -1958,6 +2219,21 @@ class balto_gui:
         #------------------------------------------        
         if (lon_i1 == lon_i2):
             lon_i2 = lon_i1 + 1
+
+        if (REPORT):
+            print()
+            print('lon_name =', lon_name)
+            print('nlons    =', nlons)
+            print('minlon   =', minlon, '(var)')
+            print('maxlon   =', maxlon, '(var)')
+            print('dlon     =', dlon)
+            print('u_minlon =', user_minlon, 'user')
+            print('u_maxlon =', user_maxlon, 'user')
+            print('lon_i1   =', lon_i1)
+            print('lon_i2   =', lon_i2)
+            print('New longitude indices =', lon_i1, ',', lon_i2 )
+            print()
+
         return (lon_i1, lon_i2)
 
     #   get_new_lon_index_range()
