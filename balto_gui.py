@@ -12,7 +12,9 @@ included in the same directory as the Jupyter notebook.
 #
 #------------------------------------------------------------------------
 
-from ipyleaflet import Map, basemaps, FullScreenControl, Rectangle
+from ipyleaflet import Map, basemaps, FullScreenControl
+from ipyleaflet import MeasureControl, Rectangle
+## from ipyleaflet import ScaleControl  # (doesn't work)
 from traitlets import Tuple
 ## import ipyleaflet as ipyl
 
@@ -27,6 +29,7 @@ import requests      # (used by get_filenames() )
 import json
 import datetime      # (used by get_duration() )
 import copy
+import numpy as np
 
 # import balto_plot as bp
 
@@ -34,8 +37,10 @@ import copy
 #
 #  class balto_gui
 #      __init__()
+#      pix_str()
 #      show_gui()
-#      make_gui()
+#      make_acc_gui()
+#      make_tab_gui()
 #      make_data_panel_v0()
 #      make_data_panel()
 #      reset_data_panel()
@@ -51,7 +56,6 @@ import copy
 #      zoom_out_to_new_bounds()
 #      get_opendap_package()
 #      get_download_format()
-#      pix_str()
 #      get_url_dir_filenames()
 #      update_filename_list()
 #      get_opendap_file_url()
@@ -120,6 +124,7 @@ class balto_gui:
         self.version  = '0.5'
         self.user_var = None
         self.default_url_dir = 'http://test.opendap.org/dap/data/nc/'
+        self.timeout_secs = 60  # (seconds)
         #----------------------------------------------------------
         # "full_box_width" = (label_width + widget_width)
         # gui_width = left_label_width + mid_width + button_width 
@@ -141,7 +146,11 @@ class balto_gui:
         self.button_width      = 70   # big enough for "Reset"
         #-----------------------------------------------------
         self.map_width         = (self.gui_width - 40)
-        self.map_height        = 250
+        self.map_height        = 230  # was 250
+        self.map_center_init   = (20.0, 0)
+        self.add_fullscreen_control = True
+        self.add_scale_control      = True
+        self.add_measure_control    = True
         #-----------------------------------------------------
         self.gui_width_px  = self.pix_str( self.gui_width )
         self.map_width_px  = self.pix_str( self.map_width )
@@ -167,18 +176,25 @@ class balto_gui:
         
     #   __init__()
     #--------------------------------------------------------------------
-    def show_gui(self):
-    
+    def pix_str(self, num):
+        return str(num) + 'px'
+    #--------------------------------------------------------------------
+    def show_gui(self, ACC_STYLE=False):
+
         #------------------------------------   
         # Create & display the complete GUI
         #------------------------------------
-        self.make_gui()
+        if (ACC_STYLE):
+            self.make_acc_gui()
+        else:
+            # Use the TAB style
+            self.make_tab_gui()
         gui_output = widgets.Output()
         display(self.gui, gui_output)
-        
+  
     #   show_gui()
     #--------------------------------------------------------------------
-    def make_gui(self):
+    def make_acc_gui(self):
 
         gui_width_px = self.gui_width_px
         
@@ -217,12 +233,59 @@ class balto_gui:
         # R_tags = "</font></b>"
         # heading = (L_tags + title + R_tags)
         pad  = self.get_padding(1, HORIZONTAL=False)  # 1 lines
+        head = widgets.HTML(value=f"<b><font size=4>BALTO User Interface</font></b>")
+        # head = widgets.Label('BALTO User Interface')
+        # self.gui = widgets.VBox([pad, head, acc])  # (top padding
+        self.gui = widgets.VBox([head, acc])   # (no top padding)
+        
+    #   make_acc_gui()
+    #--------------------------------------------------------------------
+    def make_tab_gui(self):
+
+        gui_width_px = self.gui_width_px
+        
+        self.make_data_panel()
+        self.make_map_panel()
+        self.make_datetime_panel()
+        self.make_download_panel()
+        self.make_prefs_panel()
+        #---------------------------
+        p0 = self.data_panel
+        p1 = self.map_panel
+        p2 = self.datetime_panel
+        p3 = self.download_panel
+        p4 = self.prefs_panel
+        #---------------------------
+        p0_title = 'Browse Data'
+        p1_title = 'Spatial Extent'
+        p2_title = 'Date Range'
+        p3_title = 'Download Data'
+        p4_title = 'Settings'
+    
+        #-------------------------------------------------------
+        # selected_index=0 shows Browse Data panel
+        #-------------------------------------------------------        
+        tab = widgets.Tab( children=[p0, p1, p2, p3, p4],
+                                 selected_index=0,
+                                 layout=Layout(width=gui_width_px) )
+        tab.set_title(0, p0_title)
+        tab.set_title(1, p1_title)
+        tab.set_title(2, p2_title)
+        tab.set_title(3, p3_title)
+        tab.set_title(4, p4_title)
+        #### tab.titles = [str(i) for i in range(len(children))]
+        
+        # title  = 'BALTO User Interface'
+        # L_tags = "<b><font size=5>"
+        # R_tags = "</font></b>"
+        # heading = (L_tags + title + R_tags)
+        pad  = self.get_padding(1, HORIZONTAL=False)  # 1 lines
         head = widgets.HTML(value=f"<b><font size=5>BALTO User Interface</font></b>")
         # head = widgets.Label('BALTO User Interface')
         ## self.gui = widgets.VBox([pad, head, acc])
-        self.gui = widgets.VBox([head, acc])   # (no padding above)
-        
-    #   make_gui()
+        self.gui = widgets.VBox([head, tab])   # (no padding above)
+
+    #   make_tab_gui()
     #--------------------------------------------------------------------
     def get_padding(self, n, HORIZONTAL=True):
  
@@ -377,40 +440,52 @@ class balto_gui:
         map_height_px = self.map_height_px
         btn_width_px  = self.pix_str( self.button_width )
         #--------------------------------------------------
-        bm_style   = {'description_width': '70px'}
+        # bm_style   = {'description_width': '70px'}  # for top
         bbox_style = {'description_width': '100px'}
         bbox_width_px = '260px'
- 
-        #---------------------
-        # Choose the basemap
-        #---------------------
-        options = self.get_basemap_list()
-        bm = widgets.Dropdown( description='Base map:',
-                               options=options, value=options[0],
-                               disabled=False, style=bm_style,
-                               layout=Layout(width='400px') )
-        
+  
         #---------------------------------------        
         # Create the map width with ipyleaflet
-        #---------------------------------------                
-        m = Map(center=(0.0, 0.0), zoom=1,
-                layout=Layout(width=map_width_px, height=map_height_px))
-        ## m.add_control( FullScreenControl(), position='bottomright' )
-        m.add_control( FullScreenControl( position='topright' ) )
-        
+        # Center lat 20 looks better than 0.
+        #---------------------------------------
+        map_center = self.map_center_init    # (lat, lon)                
+        m = Map(center=map_center, zoom=1,
+             layout=Layout(width=map_width_px, height=map_height_px))
+
+        #----------------------                
+        # Add more controls ?
+        #----------------------
+        if (self.add_fullscreen_control):
+            m.add_control( FullScreenControl( position='topright' ) )
+        #---------------------------------------------------------
+        # Cannot be imported. (2020-05-18)
+        # if (self.add_scale_control):
+        #     m.add_control(ScaleControl( position='bottomleft' ))
+        #---------------------------------------------------------
+        if (self.add_measure_control):      
+            measure = MeasureControl( position='bottomright',
+                active_color = 'orange',
+                primary_length_unit = 'kilometers')
+            m.add_control(measure)
+            measure.completed_color = 'red'
+            ## measure.add_length_unit('yards', 1.09361, 4)
+            ## measure.secondary_length_unit = 'yards'
+            ## measure.add_area_unit('sqyards', 1.19599, 4)
+            ## measure.secondary_area_unit = 'sqyards'
+                        
         #-----------------------------------------------------
         # Does "step=0.01" restrict accuracy of selection ??
         #-----------------------------------------------------
         w1 = widgets.BoundedFloatText(
-            value=-180, min=-180, max=180.0, step=0.01,
-            # description='West longitude:',
+            ## value=-180, min=-180, max=180.0, step=0.01,
+            value=-180, step=0.01, min=-360, max=360.0,
             description='West edge lon:',
             disabled=False, style=bbox_style,
             layout=Layout(width=bbox_width_px) )
     
         w2 = widgets.BoundedFloatText(
-            value=180, min=-180, max=180.0, step=0.01,
-            # description='East longitude:',
+            ## value=180, min=-180, max=180.0, step=0.01,
+            value=180, step=0.01, min=-360, max=360.0,
             description='East edge lon:',
             disabled=False, style=bbox_style,
             layout=Layout(width=bbox_width_px) )
@@ -435,6 +510,15 @@ class balto_gui:
         b2 = widgets.Button(description="Reset",
                             layout=Layout(width=btn_width_px))
 
+        #---------------------
+        # Choose the basemap
+        #---------------------
+        options = self.get_basemap_list()
+        bm = widgets.Dropdown( description='Base map:',
+                               options=options, value=options[0],
+                               disabled=False, style=bbox_style,
+                               layout=Layout(width='360px') )
+
         #-----------------------------------   
         # Arrange the widgets in the panel
         #-----------------------------------
@@ -443,23 +527,25 @@ class balto_gui:
         pads  = widgets.VBox([pd, pd])
         btns  = widgets.VBox([b1, b2])
         bbox  = widgets.HBox( [lons, lats, pads, btns])
-        panel = widgets.VBox( [bm, m, bbox] )
+        panel = widgets.VBox( [m, bbox, bm] )
         
-        self.map_basemap    = bm
-        self.map_window     = m
-        self.map_minlon = w1
-        self.map_maxlon = w2
-        self.map_maxlat = w3
-        self.map_minlat = w4
-        self.map_panel      = panel
-        ## self.map_bounds     = (-180, -90, 180, 90)
+        self.map_window  = m
+        self.map_minlon  = w1
+        self.map_maxlon  = w2
+        self.map_maxlat  = w3
+        self.map_minlat  = w4
+        self.map_basemap = bm
+        self.map_panel   = panel
+        
+        ## self.map_bounds = (-180, -90, 180, 90)
 
-        #-----------------     
+        #-----------------
         # Event handlers
         #-----------------
         bm.observe( self.change_base_map, names=['options','value'] )
         m.on_interaction( self.replace_map_bounds )
         m.observe( self.zoom_out_to_new_bounds, 'bounds' )
+        m.new_bounds = None  # (used for "zoom to fit")
         b1.on_click( self.update_map_bounds )
         b2.on_click( self.reset_map_panel )
                                    
@@ -513,12 +599,12 @@ class balto_gui:
     #--------------------------------------------------------------------  
     def reset_map_panel(self, caller_obj=None):
     
-        self.map_window.center = (0.0, 0.0)
-        self.map_window.zoom = 1
-        self.map_minlon.value = '-180.0'
-        self.map_maxlon.value = '180.0'
-        self.map_minlat.value = '-90.0'
-        self.map_maxlat.value = '90.0'
+        self.map_window.center = self.map_center_init
+        self.map_window.zoom   = 1
+        self.map_minlon.value  = '-225.0'
+        self.map_maxlon.value  = '225.0'
+        self.map_minlat.value  = '-51.6'
+        self.map_maxlat.value  = '70.6'
     
     #   reset_map_panel()
     #--------------------------------------------------------------------  
@@ -569,7 +655,7 @@ class balto_gui:
                      
         d8 = widgets.Textarea( description='Notes:', value='',
                      disabled=False, style=self.date_style,
-                     layout=Layout(width=full_box_width_px, height='50px')) 
+                     layout=Layout(width=full_box_width_px, height='140px')) 
                                                              
         dates = widgets.VBox([d1, d2])
         times = widgets.VBox([d3, d4])
@@ -628,35 +714,60 @@ class balto_gui:
     #   make_download_panel()
     #-------------------------------------------------------------------- 
     def make_prefs_panel(self):
-    
+   
+        full_box_width_px = self.pix_str( self.full_box_width ) 
         left_style = self.left_label_style
-        s1 = widgets.Dropdown( description='OpenDAP package:',
+        
+        w1 = widgets.Dropdown( description='OpenDAP package:',
                                options=['pydap', 'netcdf4'],
                                value='pydap',
                                disabled=False, style=left_style)
-        panel = widgets.VBox([s1])
-        self.prefs_panel = panel
-        self.prefs_package = s1
+                       
+        ts = self.timeout_secs   
+        t1 = widgets.BoundedIntText( description='Timeout:',
+                               value=ts, min=10, max=1000,
+                               step=1, disabled=False,
+                               style=left_style)
+        t2 = widgets.Label( ' (seconds)',
+                           layout=Layout(width='80px') )
+        w2 = widgets.HBox([t1, t2])                       
+        note = 'Under construction; preferences will go here.'
+        w3 = widgets.Textarea( description='Notes:', value=note,
+                     disabled=False, style=left_style,
+                     layout=Layout(width=full_box_width_px, height='50px')) 
+                     
+        panel = widgets.VBox([w1, w2, w3])
+        self.prefs_package = w1
+        self.prefs_timeout = t1
+        self.prefs_notes   = w2
+        self.prefs_panel   = panel
 
     #   make_prefs_panel()
     #--------------------------------------------------------------------
     #--------------------------------------------------------------------
     def get_map_bounds(self, FROM_MAP=True):
 
+        #----------------------------------------------
+        # Notes: ipyleaflet defines "bounds" as:
+        #        [[minlat, maxlat], [minlon, maxlon]]
+        #----------------------------------------------
         if (FROM_MAP):
             #------------------------------------      
             # Get the visible map bounds, after
             # interaction such as pan or zoom
             #------------------------------------
-            bounds = self.map_window.bounds
-            minlat = bounds[0][0]
-            minlon = bounds[0][1]
-            maxlat = bounds[1][0]
-            maxlon = bounds[1][1]  
-#             minlon = self.map_window.west
-#             minlat = self.map_window.south
-#             maxlon = self.map_window.east
-#             maxlat = self.map_window.north
+#             bounds = self.map_window.bounds
+#             minlat = bounds[0][0]
+#             minlon = bounds[0][1]
+#             maxlat = bounds[1][0]
+#             maxlon = bounds[1][1]
+            #------------------------------------
+            # Is this more reliable ?
+            #------------------------------------             
+            minlon = self.map_window.west
+            minlat = self.map_window.south
+            maxlon = self.map_window.east
+            maxlat = self.map_window.north
             return (minlon, minlat, maxlon, maxlat)
         else:
             #---------------------------------
@@ -681,11 +792,12 @@ class balto_gui:
 
         #--------------------------------        
         # Save new values in text boxes
+        # Format with 8 decimal places.
         #--------------------------------
-        self.map_minlon.value = minlon
-        self.map_maxlon.value = maxlon
-        self.map_maxlat.value = maxlat
-        self.map_minlat.value = minlat
+        self.map_minlon.value = "{:.8f}".format( minlon )
+        self.map_maxlon.value = "{:.8f}".format( maxlon )
+        self.map_maxlat.value = "{:.8f}".format( maxlat )
+        self.map_minlat.value = "{:.8f}".format( minlat )
     
     #   replace_map_bounds()    
     #--------------------------------------------------------------------
@@ -734,6 +846,7 @@ class balto_gui:
     #   update_map_bounds()
     #--------------------------------------------------------------------
     def zoom_out_to_new_bounds(self, change=None):
+    
         # change owner is the widget that triggers the handler
         m = change.owner
 
@@ -820,12 +933,8 @@ class balto_gui:
     def get_download_format(self):
     
         return self.download_format.value
-
-    #--------------------------------------------------------------------
-    def pix_str(self, num):
-
-        return str(num) + 'px'
-
+        
+    #   get_download_format()
     #--------------------------------------------------------------------
     def get_url_dir_filenames(self):
  
@@ -887,9 +996,10 @@ class balto_gui:
     #--------------------------------------------------------------------
     def open_dataset(self):
 
+        timeout = self.timeout_secs
         opendap_url = self.opendap_file_url
-        dataset = pydap.client.open_url( opendap_url )
-        
+        dataset = pydap.client.open_url( opendap_url, timeout=timeout )
+
         self.dataset = dataset
 
     #   open_dataset()
@@ -1033,7 +1143,8 @@ class balto_gui:
     
         short_name = self.data_var_name.value
         if (short_name == ''):
-            print('Short name is not set.')
+            pass
+            ## print('Short name is not set.')
         return short_name
             
     #   get_var_shortname()
@@ -1319,10 +1430,11 @@ class balto_gui:
         #------------------------------------------
         # If test time_delta is too small, we'll
         # get a start_index that is out of range.
+        # Next 3 worked in some SST tests.
         #------------------------------------------
-        # self.time_delta = '0000-02-00 00:00:00'  # WORKED
-        # self.time_delta = '0000-00-30 12:00:00'  # WORKED
-        # self.time_delta = '0001-00-00 00:00:00'  # WORKED
+        # self.time_delta = '0000-02-00 00:00:00'
+        # self.time_delta = '0000-00-30 12:00:00'
+        # self.time_delta = '0001-00-00 00:00:00'
 
         #----------------------------------------------
         # Is there a time variable ?  If so, use time
@@ -1348,41 +1460,124 @@ class balto_gui:
         # Did user set a spatial resolution ?
         #--------------------------------------
                 
-        #-----------------------------------
-        # Actually download the data here
-        # to a variable in the notebook
-        #-----------------------------------      
-        print('Downloading variable:', short_name, '...' )
+
         # Asynchronous download. How do we know its here?
-        print('Variable saved in: balto.user_var')
-        print()
+        # print('Downloading variable:', short_name, '...' )
+        # print('Variable saved in: balto.user_var')
+        # print()
+        
+        msg1 = 'Downloading variable: ' + short_name + '...'   
+        msg2 = 'Variable saved in:  balto.user_var'
+        msg3 = ' '
+        self.append_download_log( [msg1, msg2, msg3] )
 
         #---------------------------------------------        
         # Convert reference to actual numpy variable
         # which causes it to be downloaded, and then
         # store it into balto.user_var.
-        #---------------------------------------------
-        data_obj  = self.dataset[ short_name ]
+        #---------------------------------------------------
+        # This grid includes var and its dimension vectors.
+        # Note:  type(pydap_grid) = pydap.model.GridType
+        #---------------------------------------------------
+        pydap_grid = self.dataset[ short_name ]
+        ndims = len( pydap_grid.dimensions ) # (e.g. time, lat, lon)
+        ## data_obj  = self.dataset[ short_name ]
         ## data_dims = data_obj.dimensions
         ## ndim      = len( data_dims )
 
-        #-----------------------------------------------
-        # Restrict array indices here, before download
-        #-----------------------------------------------
-        ##### CURRENTLY ASSUMES DIMS (time, lat, lon)  #######
-        ## grid = data_obj[ti1:ti2, :, :]
-        grid = data_obj[t_i1:t_i2, lat_i1:lat_i2, lon_i1:lon_i2]
-        var  = grid.array[:].data
-        
-        ## RECALL:  self.time_var = self.time_obj.data[:]
-        ## var = data_obj.array[:]
-        ## var = data_obj.data[ti1:ti2, :, :]   #######
-        
-        # Next line may not be general.
-        ## var = data_obj.array[:].data    ## (all indices of data)
-       
-        self.user_var = var 
+        #------------------------------------------------
+        # Actually download the data here to a variable
+        # in the notebook, but restrict indices first,
+        # to only download the required data.
+        #------------------------------------------------
+        if (ndims == 3):
+            #-------------------------------------
+            # Assume dims are:  (time, lat, lon)
+            #------------------------------------------
+            # After subscripting, grid still has type:
+            #    pydap.model.GridType
+            #------------------------------------------
+            if (lat_i1 is None) or (lon_i1 is None):
+                grid = pydap_grid[t_i1:t_i2, :, :]
+            else:
+                grid = pydap_grid[t_i1:t_i2, lat_i1:lat_i2, lon_i1:lon_i2]
+        #----------------------------------------
+        elif (ndims == 1):  # time series
+            grid = pydap_grid[t_i1:t_i2]
+        #-----------------------------------
+        elif (ndims == 2):  # spatial grid
+            #-------------------------------
+            # Assume dims are:  (lat, lon)
+            #-------------------------------
+            if (lat_i1 is None) or (lon_i1 is None):
+                grid = pydap_grid[:, :]
+            else:
+                grid = pydap_grid[lat_i1:lat_i2, lon_i1:lon_i2]
+        #------------------------------------
+        else:
+            grid = pydap_grid[:]
 
+        #--------------------------------------------------
+        # Note: type(pydap_grid)   = pydap.model.gridtype
+        #       type(grid)         = pydap.model.gridtype
+        #       type(grid[:].data) = list
+        #       type(grid.data)    = list
+        #--------------------------------------------------
+        # Subscript by *ranges* doesn't change data type.
+        #--------------------------------------------------        
+        grid_list = grid.data   ########
+        n_list    = len(grid_list)
+        print('## type(grid) =', type(grid) )
+        print('## type(grid.data) =', type(grid_list) )
+        print('## len(grid.data)  =', n_list )
+        var = grid_list[0]
+        print('## type(var) =', type(var) )
+        print()
+        if (n_list > 1):
+            times = grid_list[1]
+        if (n_list > 2):
+            lats = grid_list[2]
+        if (n_list > 3):
+            lons = grid_list[3]
+            SIGNED_LONS = True
+            if (SIGNED_LONS):
+                lons = (lons - 180.0)   ####################
+                 
+        #---------------------------------------      
+        # Is there a scale factor and offset ?
+        #---------------------------------------
+        atts = pydap_grid.attributes
+        if ('scale_factor' in atts.keys()):
+            #---------------------------------------------------
+            # Note: var may have type ">i2" while scale_factor
+            #       may have type "float64", so need to upcast
+            #       var and can't use "*="
+            #---------------------------------------------------
+            factor = pydap_grid.attributes['scale_factor']
+            ## print('type(var) =', type(var))
+            ## print('type(factor) =', type(factor))
+            var = var * factor
+        if ('add_offset' in atts.keys()):
+            offset = pydap_grid.attributes['add_offset']
+            ## print('type(var) =', type(var))
+            ## print('type(offset) =', type(offset))
+            var = var + offset
+ 
+        #-----------------------------------------           
+        # Save var into balto object as user_var
+        #-----------------------------------------        
+        self.user_var = var
+        self.user_var_times = None
+        self.user_var_lats  = None
+        self.user_var_lons  = None
+        #--------------------------------
+        if (n_list > 1):
+            self.user_var_times = times
+        if (n_list > 2):
+            self.user_var_lats = lats
+        if (n_list > 3):
+            self.user_var_lons = lons
+        
         #----------------------------------------------------        
         # Could define self.user_var as a list, and append
         # new variables to the list as downloaded.
@@ -1484,14 +1679,15 @@ class balto_gui:
         # If so, assume it is in "datetime" form,
         # such as 00-01-00 00:00:00" for 1 month.
         #-------------------------------------------
-        if (hasattr(self.time_obj, 'delta_t')):
+        HAS_DELTA_T = hasattr(self.time_obj, 'delta_t')
+        if (HAS_DELTA_T):
             self.time_delta = self.time_obj.delta_t
         else:
-            self.time_delta = self.get_time_delta_str()
-            #-------------------------------------------
-            ## msg = 'Unable to find "delta_t" for times.'
-            ## self.datetime_notes.value = msg
-            ## return
+            self.get_time_delta_str()
+        # For testing:
+        # print('In update_datetime_panel():' )
+        # print('self.time_delta =', self.time_delta )
+        # print('HAS_DELTA_T =', HAS_DELTA_T )
 
         #---------------------------------------------------
         # Are time units given as "time since" some date ?
@@ -1603,13 +1799,19 @@ class balto_gui:
     #--------------------------------------------------------------------
     def get_time_delta_str(self):
 
+        ## print('### self.time_var.size =', self.time_var.size )
+        ## print('###')
+        
         #-----------------------------------
         # Check size of the time_var array
         #-----------------------------------
         if (self.time_var.size == 1):
             dt = 0
-            self.time_delta = None
-            return  # Don't need time_delta
+            self.time_delta = '0000-00-00 00:00:00'
+            # print('At top of get_time_delta_str():')
+            # print('self.time_var.size =', self.time_var.size )
+            # print('self.time_delta =', self.time_delta )
+            return
         if (self.time_var.size > 1):  
             dt  = (self.time_var[1] - self.time_var[0])
             print('dt1 =', dt)
@@ -1676,12 +1878,11 @@ class balto_gui:
             td = ('0000-00-00 00:' + s + ':00')
         if (units == 'seconds'):
             td = ('0000-00-00 00:00:' + s)
-        #-------------------------------------------------------
-        # self.time_units = units   ######### DO THIS ?? #######
-        ######################################
+        #------------------------------------------------
         self.time_delta = td
-        print('time_delta string =', td)
-        print()
+        # print('At bottom of get_time_delta_str():')
+        # print('self.time_delta =', td)
+        # print()
 
     #   get_time_delta_str()
     #--------------------------------------------------------------------
@@ -1760,24 +1961,6 @@ class balto_gui:
 
     #   get_end_datetime_obj()
     #--------------------------------------------------------------------  
-#     def get_dt_from_datetime_str(self, datetime_str):
-# 
-#         #-------------------------------------------------------  
-#         # Notes:  May not need this.  Not finished.
-#         #         If possible, it will be more powerful/general
-#         #         to work with dt as a datetime string.
-#         #         e.g. dt could be 3 days, or 3.5 days, etc.
-#         #-------------------------------------------------------
-#         # type(datetime_obj) = "<class 'datetime.datetime'>"
-#         # type(datetime_str) = "<class 'str'>"
-#         #----------------------------------------------------- 
-#         # Convert to string if passed datetime_obj.
-#         #-----------------------------------------------------     
-#         dt_str = str(datetime_str)
-#         (y,m1,d,h,m2,s) = self.split_datetime_str( dt_str, ALL=True )
-#           
-#     #   get_dt_from_datetime_str()
-    #--------------------------------------------------------------------  
     def split_datetime_str(self, datetime_obj, datetime_sep=' ',
                            ALL=False):
  
@@ -1786,8 +1969,9 @@ class balto_gui:
         #-----------------------------------------------
         datetime_str = str(datetime_obj)
         parts = datetime_str.split( datetime_sep )
-        # print('## datetime_str =', datetime_str )
-        # print('## parts =', str(parts) )
+        ## print('## datetime_str =', datetime_str )
+        ## print('## parts =', str(parts) )
+        
         date_str = parts[0]
         time_str = parts[1]
         if not(ALL):
@@ -1895,46 +2079,6 @@ class balto_gui:
         return time_since
             
     #   get_time_since_from_datetime()
-    #--------------------------------------------------------------------                       
-#     def get_datetime_from_days_since(self, days_since):
-# 
-#         #---------------------------------------------        
-#         # Create new datetime object from days_since
-#         #---------------------------------------------
-#         origin_obj = self.origin_datetime_obj
-#         delta      = datetime.timedelta( days_since )
-#         new_dt_obj = (origin_obj + delta)
-# 
-#         return new_dt_obj
-# 
-#     #   get_datetime_from_days_since()
-    #--------------------------------------------------------------------                       
-#     def get_days_since_from_datetime(self, datetime_obj):
-# 
-#         #------------------------------------------------
-#         # Comput time duration between datetime objects
-#         #------------------------------------------------
-#         origin_obj    = self.origin_datetime_obj
-#         duration_obj  = (datetime_obj - origin_obj)
-#         duration_secs = duration_obj.total_seconds()        
-#         duration_days = (duration_secs / 86400.0)
-#         days_since    = duration_days
-# 
-#         return days_since
-# 
-#     #   get_days_since_from_datetime()
-    #-------------------------------------------------------------------- 
-#     def replace_time_in_datetime_obj(self, datetime_obj, time_str):
-#  
-#         time_obj = datetime.datetime.strptime(time_str, '%H:%M:%S').time()
-#    
-#         # (h, m, s) = self.split_time_str( time_str )
-#         ### datetime.datetime.strptime( )
-#         datetime_obj = datetime.datetime.combine( datetime_obj, time_obj )
-#         # datetime_obj.replace(hour=h, minute=m, second=s)
-#         # problem is that datetime_obj is just date object rn.
-#         
-#     #   replace_time_in_datetime_obj()
     #--------------------------------------------------------------------  
     def get_month_difference(self, start_datetime_obj, end_datetime_obj ):
  
@@ -1995,6 +2139,8 @@ class balto_gui:
         #       so we use "get_month_difference()".  Also
         #       it does not have a "years" argument.
         #---------------------------------------------------
+        ## print('In get_new_time_index_range():')
+        ## print('self.time_delta =', self.time_delta)
         USE_LOOPS = True
         (y,m1,d,h,m2,s) = self.split_datetime_str(self.time_delta, ALL=True)
         ## print('time_delta =', self.time_delta )
@@ -2021,8 +2167,8 @@ class balto_gui:
         #-------------------------------------------------
         if (USE_LOOPS):
             start_index = 0
-            print('min_datetime_str =', str(min_datetime_obj) )
-            print('dt_timedelta_str =', dt_timedelta_obj )
+            # print('min_datetime_str =', str(min_datetime_obj) )
+            # print('dt_timedelta_str =', str(dt_timedelta_obj) )
             next = copy.copy( min_datetime_obj )
             while (True):
                 next = (next + dt_timedelta_obj)
@@ -2048,14 +2194,25 @@ class balto_gui:
         #---------------------------------------
         # User time period may be smaller than
         # time spacing (dt).
-        #---------------------------------------        
+        #----------------------------------------------------
+        # We are using these indices like this:
+        #   a[ t_i1:t_i2, lat_i1:lat_i2, lon_i1:lon_i2]
+        # So if indices are equal, result will be empty.
+        # If indices differ by 1, get 1 value for that dim.
+        #----------------------------------------------------        
         if (start_index == end_index):
             end_index = start_index + 1
         
         if (REPORT):
-            print('n_times =', nt)
-            print('New time indices =', start_index, ',', end_index)
-            print()
+            # print('n_times =', nt)
+            # print('New time indices =', start_index, ',', end_index)
+            # print()
+            #--------------------------
+            i1s  = str(start_index)
+            i2s  = str(end_index)
+            msg1 = 'n_times = ' + str(nt)
+            msg2 = 'New time indices = ' + i1s + ',' + i2s
+            self.append_download_log( [msg1, msg2, ' '] )
 
         return (start_index, end_index)
                      
@@ -2076,15 +2233,22 @@ class balto_gui:
     def get_new_lat_index_range(self, REPORT=True):
        
         short_name = self.get_var_shortname()
-        dim_list = self.dataset[ short_name ].dimensions
-        lat_name = None
+        #-------------------------------------------------
+        # Note: dimensions can be things like 'ni', 'nj'
+        #       so its better to use the list of all
+        #       variable short names, stored earlier.
+        #       They are valid keys to self.dataset.
+        #-------------------------------------------------
+        ## dim_list = self.dataset[ short_name ].dimensions
+        ## dim_list = self.dataset[ short_name ].attributes.keys()
+        dim_list = self.var_short_names       
         lat_name_list = ['lat', 'LAT', 'coadsy', 'COADSY',
-                         'latitude', 'LATITUDE']
+                         'latitude', 'LATITUDE', 'None']
         for lat_name in lat_name_list:
             if (lat_name in dim_list):
                 break
-        if (lat_name is None):
-            msg1 = 'Sorry, could not find a "latitude" dimension.'
+        if (lat_name is 'None'):
+            msg1 = 'Sorry, could not find a "latitude" variable.'
             msg2 = 'Checked: lat, LAT, coadsy, COADSY,'
             msg3 = '   latitude and LATITUDE.'
             self.append_download_log( [msg1, msg2, msg3] )
@@ -2107,11 +2271,57 @@ class balto_gui:
 
         #----------------------------------       
         # Get the array of lats, and info
-        #----------------------------------  
-        lats   = self.dataset[ lat_name ]
-        nlats  = len(lats)
-        minlat = min(lats)  ## does this cause download? use actual_range?
-        maxlat = max(lats)
+        #-----------------------------------------
+        # <class 'pydap.model.BaseType'>' object
+        #    has no attribute 'array'
+        #--------------------------------------------------
+        # Next line type:  <class 'pydap.model.BaseType'>
+        # and has no attribute "array".
+        #--------------------------------------------------
+        # lats = self.dataset[ lat_name ]
+        # lats = self.dataset[ lat_name ].array
+        #----------------------------------------------------------
+        # Next line type:  <class 'pydap.handlers.dap.BaseProxy'>
+        # and has no attribute "size".
+        #----------------------------------------------------------
+        # lats = self.dataset[ lat_name ].data
+        #----------------------------------------------------------
+        # Next line type:  <class 'pydap.model.BaseType'>
+        # and data is downloaded from server.
+        #----------------------------------------------------------
+        # lats = self.dataset[ lat_name ][:]
+        #----------------------------------------------------------
+        # Next line type:  <class 'numpy.ndarray'>
+        #----------------------------------------------------------                      
+        lats = self.dataset[ lat_name ][:].data
+        
+        if (lats.ndim > 1):
+            msg1 = 'Sorry, cannot yet restrict latitude indices'
+            msg2 = '   when lat array has more than 1 dimension.'
+            self.append_download_log( [msg1, msg2] )
+            return (None, None)
+            
+        # print('## type(lats) =', type(lats) )
+        # print('## lats.shape =', lats.shape )
+        # print('## lats =', lats )
+
+        #------------------------------------------
+        # This only works if lats are a 1D list.
+        # If a "list of lists", len() will be for
+        # the outer list and min() won't work.
+        # Also, no "size" attribute, etc.
+        #------------------------------------------
+        # Don't want to rely on "actual_range",
+        # because it could be missing or wrong.
+        #------------------------------------------
+        # nlats  = len(lats)
+        # minlat = min(lats)
+        # maxlat = max(lats)
+        #-----------------------
+        nlats  = lats.size
+        minlat = lats.min()
+        maxlat = lats.max()
+        #---------------------------
         latdif = (maxlat - minlat)
         if (CENTERS):
             dlat = (latdif / (nlats - 1))
@@ -2120,9 +2330,13 @@ class balto_gui:
        
         #--------------------------------------
         # Compute the new, restricted indices
-        #-------------------------------------- 
+        #--------------------------------------
+        # Here, int() behaves like "floor()".
+        # So maybe add 1 to lat_i2 ???
+        #--------------------------------------
         lat_i1 = int( (user_minlat - minlat) / dlat )
         lat_i2 = int( (user_maxlat - minlat) / dlat )
+        lat_i2 = (lat_i2 + 1)  ########
 
         #---------------------------------
         # Make sure indices are in range
@@ -2134,38 +2348,53 @@ class balto_gui:
         # as is the case with Puerto Rico, where
         # data grid cells are 1 deg x 1 deg or so.
         #------------------------------------------        
-        if (lat_i1 == lat_i2):
+        if (lat_i1 == lat_i2):  # (still possible?)
             lat_i2 = lat_i1 + 1
  
         if (REPORT):
             print('lat_name =', lat_name)
-            print('nlats    =', nlats)
             print('minlat   =', minlat, '(var)' )
             print('maxlat   =', maxlat, '(var)' )
             print('dlat     =', dlat)
             print('u_minlat =', user_minlat, '(user)' )
             print('u_maxlat =', user_maxlat, '(user)' )        
-            print('lat_i1   =', lat_i1)
-            print('lat_i2   =', lat_i2)
-            print('New latitude indices =', lat_i1, ',', lat_i2)
-            print()
-            
+            print('lat_i1   =', lat_i1, '(new index)')
+            print('lat_i2   =', lat_i2, '(new index)')
+            # print('nlats    =', nlats)
+            # print('New latitude indices =', lat_i1, ',', lat_i2)
+            # print()
+            #-------------------------------
+            i1s  = str(lat_i1)
+            i2s  = str(lat_i2)
+            msg1 = 'lat_name = ' + lat_name
+            msg2 = 'dlat = ' + str(dlat)
+            msg3 = 'nlats = ' + str(nlats)
+            msg4 = 'New latitude indices = ' + i1s + ', ' + i2s
+            self.append_download_log([msg1, msg2, msg3, msg4, ' '])
+                        
         return (lat_i1, lat_i2)
 
     #   get_new_lat_index_range()
     #--------------------------------------------------------------------
     def get_new_lon_index_range(self, REPORT=True):
 
-        short_name = self.get_var_shortname() 
-        dim_list = self.dataset[ short_name ].dimensions
-        lon_name = None
+        short_name = self.get_var_shortname()
+        #-------------------------------------------------
+        # Note: dimensions can be things like 'ni', 'nj'
+        #       so its better to use the list of all
+        #       variable short names, stored earlier.
+        #       They are valid keys to self.dataset.
+        #-------------------------------------------------
+        ## dim_list = self.dataset[ short_name ].dimensions
+        ## dim_list = self.dataset[ short_name ].attributes.keys()
+        dim_list = self.var_short_names
         lon_name_list = ['lon', 'LON', 'coadsx', 'COADSX',
-                         'longitude', 'LONGITUDE']
+                         'longitude', 'LONGITUDE', 'None']
         for lon_name in lon_name_list:
             if (lon_name in dim_list):
                 break
-        if (lon_name is None):
-            msg1 = 'Sorry, could not find a "longitude" dimension.'
+        if (lon_name is 'None'):
+            msg1 = 'Sorry, could not find a "longitude" variable.'
             msg2 = 'Checked: lon, LON, coadsx, COADSX,'
             msg3 = '   longitude and LONGITUDE.'
             self.append_download_log( [msg1, msg2, msg3] )
@@ -2187,12 +2416,38 @@ class balto_gui:
         user_maxlon = self.map_maxlon.value
 
         #----------------------------------       
-        # Get the array of lats, and info
-        #----------------------------------  
-        lons   = self.dataset[ lon_name ]
-        nlons  = len(lons)
-        minlon = min(lons)  ## does this cause download? use actual_range?
-        maxlon = max(lons)
+        # Get the array of lons, and info
+        #----------------------------------
+        lons = self.dataset[ lon_name ][:].data
+        
+        if (lons.ndim > 1):
+            msg1 = 'Sorry, cannot yet restrict longitude indices'
+            msg2 = '   when lon array has more than 1 dimension.'
+            self.append_download_log( [msg1, msg2] )
+            return (None, None)
+
+        # print('## type(lons) =', type(lons) )
+        # print('## lons.shape =', lons.shape )
+        # print('## lons.ndim  =', lons.ndim )
+        
+        #------------------------------------------
+        # This only works if lons are a 1D list.
+        # If a "list of lists", len() will be for
+        # the outer list and min() won't work.
+        # Also, no "size" attribute, etc.
+        #------------------------------------------
+        # Don't want to rely on "actual_range",
+        # because it could be missing or wrong.
+        #------------------------------------------
+        # nlons  = len(lons)
+        # minlon = min(lons)
+        # maxlon = max(lons)
+        #---------------------------
+        ## lons   = np.array( lons, dtype='float64' )
+        nlons  = lons.size
+        minlon = lons.min()
+        maxlon = lons.max()
+        #---------------------------
         londif = (maxlon - minlon)
         if (CENTERS):
             dlon = (londif / (nlons - 1))
@@ -2211,10 +2466,14 @@ class balto_gui:
       
         #--------------------------------------
         # Compute the new, restricted indices
+        #--------------------------------------
+        # Here, int() behaves like "floor()".
+        # So maybe add 1 to lon_i2 ???
         #-------------------------------------- 
         lon_i1 = int( (user_minlon - minlon) / dlon )
         lon_i2 = int( (user_maxlon - minlon) / dlon )
-         
+        lon_i2 = lon_i2 + 1   #######
+
         #---------------------------------
         # Make sure indices are in range
         #---------------------------------------- 
@@ -2225,22 +2484,30 @@ class balto_gui:
         # as is the case with Puerto Rico, where
         # data grid cells are 1 deg x 1 deg or so.
         #------------------------------------------        
-        if (lon_i1 == lon_i2):
+        if (lon_i1 == lon_i2):   # (still needed?)
             lon_i2 = lon_i1 + 1
 
         if (REPORT):
             print()
             print('lon_name =', lon_name)
-            print('nlons    =', nlons)
             print('minlon   =', minlon, '(var)')
             print('maxlon   =', maxlon, '(var)')
             print('dlon     =', dlon)
-            print('u_minlon =', user_minlon, 'user')
-            print('u_maxlon =', user_maxlon, 'user')
-            print('lon_i1   =', lon_i1)
-            print('lon_i2   =', lon_i2)
-            print('New longitude indices =', lon_i1, ',', lon_i2 )
-            print()
+            print('u_minlon =', user_minlon, '(user)')
+            print('u_maxlon =', user_maxlon, '(user)')
+            print('lon_i1   =', lon_i1, '(new index)')
+            print('lon_i2   =', lon_i2, '(new index)')
+#             print('nlons    =', nlons)
+#             print('New longitude indices =', lon_i1, ',', lon_i2 )
+#             print()
+            #--------------------------------------------------
+            i1s  = str(lon_i1)
+            i2s  = str(lon_i2)
+            msg1 = 'lon_name = ' + lon_name
+            msg2 = 'dlon = ' + str(dlon)
+            msg3 = 'nlons = ' + str(nlons)
+            msg4 = 'New longitude indices = ' + i1s + ', ' + i2s
+            self.append_download_log([msg1, msg2, msg3, msg4, ' '])
 
         return (lon_i1, lon_i2)
 
