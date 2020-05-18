@@ -1316,8 +1316,9 @@ class balto_gui:
         # var_name should be a list of words, as a single
         # string, separated by underscores.
         #-----------------------------------------------------
+        var_name2 = var_name.replace(' ', '_')
         match_phrase_svc = 'http://34.73.227.230:8000/match_phrase/'    
-        match_phrase_url = match_phrase_svc + var_name + '/'
+        match_phrase_url = match_phrase_svc + var_name2 + '/'
         print('Working...')
         
         #-----------------------------------------------------------------       
