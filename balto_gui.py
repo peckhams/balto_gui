@@ -1373,14 +1373,21 @@ class balto_gui:
            return  ############
        
         start_datetime_obj = self.get_start_datetime_obj()
-        ### (start_date, start_time) = self.split_datetime_str
-        start_date = str( start_datetime_obj.date() )
-        start_time = str( start_datetime_obj.time() )
-
+        if (start_datetime_obj is not None):
+            start_date = str( start_datetime_obj.date() )
+            start_time = str( start_datetime_obj.time() )
+        else:
+            start_date = 'unknown'
+            start_time = 'unknown'
+        
         end_datetime_obj = self.get_end_datetime_obj()
-        end_date = str( end_datetime_obj.date() )
-        end_time = str( end_datetime_obj.time() )
- 
+        if (end_datetime_obj is not None):
+            end_date = str( end_datetime_obj.date() )
+            end_time = str( end_datetime_obj.time() )
+        else:
+            end_date = 'unknown'
+            end_time = 'unknown'
+            
         #------------------------------------------        
         # Show message in downloads panel log box
         #------------------------------------------       
@@ -1499,19 +1506,28 @@ class balto_gui:
             #    pydap.model.GridType
             #------------------------------------------
             if (lat_i1 is None) or (lon_i1 is None):
-                grid = pydap_grid[t_i1:t_i2, :, :]
+                if (t_i1 is None):
+                    grid = pydap_grid[:]
+                else:
+                    grid = pydap_grid[t_i1:t_i2, :, :]
             else:
-                grid = pydap_grid[t_i1:t_i2, lat_i1:lat_i2, lon_i1:lon_i2]
+                if (t_i1 is None):
+                    grid = pydap_grid[:, lat_i1:lat_i2, lon_i1:lon_i2]
+                else: 
+                    grid = pydap_grid[t_i1:t_i2, lat_i1:lat_i2, lon_i1:lon_i2]
         #----------------------------------------
         elif (ndims == 1):  # time series
-            grid = pydap_grid[t_i1:t_i2]
+            if (t_i1 is None):
+                grid = pydap_grid[:]
+            else:
+                grid = pydap_grid[t_i1:t_i2]
         #-----------------------------------
         elif (ndims == 2):  # spatial grid
             #-------------------------------
             # Assume dims are:  (lat, lon)
             #-------------------------------
             if (lat_i1 is None) or (lon_i1 is None):
-                grid = pydap_grid[:, :]
+                grid = pydap_grid[:]
             else:
                 grid = pydap_grid[lat_i1:lat_i2, lon_i1:lon_i2]
         #------------------------------------
@@ -1528,12 +1544,15 @@ class balto_gui:
         #--------------------------------------------------        
         grid_list = grid.data   ########
         n_list    = len(grid_list)
-        print('## type(grid) =', type(grid) )
-        print('## type(grid.data) =', type(grid_list) )
-        print('## len(grid.data)  =', n_list )
         var = grid_list[0]
-        print('## type(var) =', type(var) )
-        print()
+        
+        # For testing
+        # print('## type(grid) =', type(grid) )
+        # print('## type(grid.data) =', type(grid_list) )
+        # print('## len(grid.data)  =', n_list )
+        # print('## type(var) =', type(var) )
+        # print()
+    
         if (n_list > 1):
             times = grid_list[1]
         if (n_list > 2):
@@ -2112,9 +2131,13 @@ class balto_gui:
     def get_new_time_index_range(self, REPORT=True):
 
         if not(hasattr(self, 'origin_datetime_str')):
-            print('Sorry, origin datetime is not set.')
-            nt = len(self.time_var)
-            return (0, nt - 1)  # (unrestricted by choices) 
+            msg = 'Sorry, origin datetime is not set.'
+            self.append_download_log( [msg, ' '] )
+            if (hasattr(self, 'time_var')):
+                nt = len(self.time_var)
+                return (0, nt - 1)  # (unrestricted by choices) 
+            else:
+                return (None, None)
 
         #----------------------------------------------------
         # Get min possible datetime, from time_vars.min().
@@ -2253,7 +2276,7 @@ class balto_gui:
             msg2 = 'Checked: lat, LAT, coadsy, COADSY,'
             msg3 = '   latitude and LATITUDE.'
             self.append_download_log( [msg1, msg2, msg3] )
-            return None
+            return (None, None)
 
         #-------------------------------------------- 
         # Are lats for grid cell edges or centers ?
@@ -2399,7 +2422,7 @@ class balto_gui:
             msg2 = 'Checked: lon, LON, coadsx, COADSX,'
             msg3 = '   longitude and LONGITUDE.'
             self.append_download_log( [msg1, msg2, msg3] )
-            return None
+            return (None, None)
 
         #-------------------------------------------- 
         # Are lats for grid cell edges or centers ?
