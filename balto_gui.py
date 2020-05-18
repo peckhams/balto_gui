@@ -345,15 +345,12 @@ class balto_gui:
         #------------------------------------------------------------------
         o7 = widgets.Text(description='Data type:', style=left_style,
                           value='', layout=Layout(width=full_width_px) )
-<<<<<<< HEAD
-        o8 = widgets.Text(description='Attributes:', style=left_style,
-                          value='', layout=Layout(width=full_width_px) )
-=======
+
         o8 = widgets.Dropdown( description='Attributes:',
                                options=[''], value='',
                                disabled=False, style=left_style,
                                layout=Layout(width=full_width_px) )
->>>>>>> upstream/master
+
         o9 = widgets.Text(description='Status:', style=left_style,
                           value='Ready.', layout=Layout(width=full_width_px) )
         b2 = widgets.Button(description="Reset", layout=Layout(width=btn_width_px))
