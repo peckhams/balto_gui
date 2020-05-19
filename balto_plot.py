@@ -10,6 +10,7 @@ BALTO GUI app.  It should be included in the same directory as
 #------------------------------------------------------------------------
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 #------------------------------------------------------------------------
 #

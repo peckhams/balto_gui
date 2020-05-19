@@ -30,8 +30,7 @@ import json
 import datetime      # (used by get_duration() )
 import copy
 import numpy as np
-
-# import balto_plot as bp
+import balto_plot as bp
 
 #------------------------------------------------------------------------
 #
@@ -1562,11 +1561,21 @@ class balto_gui:
             SIGNED_LONS = True
             if (SIGNED_LONS):
                 lons = (lons - 180.0)   ####################
-                 
+ 
+        #-----------------------------      
+        # Is there a missing value ?
+        # Is there a fill value ?
+        #-----------------------------
+        atts = pydap_grid.attributes
+        REPLACE_MISSING = False
+        if ('missing_value' in atts.keys()):
+             REPLACE_MISSING = True
+             missing_value = pydap_grid.attributes['missing_value']
+             w = (var == missing_value)
+                  
         #---------------------------------------      
         # Is there a scale factor and offset ?
         #---------------------------------------
-        atts = pydap_grid.attributes
         if ('scale_factor' in atts.keys()):
             #---------------------------------------------------
             # Note: var may have type ">i2" while scale_factor
@@ -1583,6 +1592,12 @@ class balto_gui:
             ## print('type(offset) =', type(offset))
             var = var + offset
  
+        #-----------------------------------------
+        # Restore missing values after scaling ?
+        #-----------------------------------------  
+        if (REPLACE_MISSING):
+            var[w] = missing_value
+
         #-----------------------------------------           
         # Save var into balto object as user_var
         #-----------------------------------------        
@@ -2271,7 +2286,7 @@ class balto_gui:
         for lat_name in lat_name_list:
             if (lat_name in dim_list):
                 break
-        if (lat_name is 'None'):
+        if (lat_name == 'None'):
             msg1 = 'Sorry, could not find a "latitude" variable.'
             msg2 = 'Checked: lat, LAT, coadsy, COADSY,'
             msg3 = '   latitude and LATITUDE.'
@@ -2417,7 +2432,7 @@ class balto_gui:
         for lon_name in lon_name_list:
             if (lon_name in dim_list):
                 break
-        if (lon_name is 'None'):
+        if (lon_name == 'None'):
             msg1 = 'Sorry, could not find a "longitude" variable.'
             msg2 = 'Checked: lon, LON, coadsx, COADSX,'
             msg3 = '   longitude and LONGITUDE.'
