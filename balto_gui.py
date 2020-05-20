@@ -53,8 +53,7 @@ import balto_plot as bp
 #      replace_map_bounds2()
 #      update_map_bounds()
 #      zoom_out_to_new_bounds()
-#      get_opendap_package()
-#      get_download_format()
+#      --------------------------
 #      get_url_dir_filenames()
 #      update_filename_list()
 #      get_opendap_file_url()
@@ -74,17 +73,9 @@ import balto_plot as bp
 #      get_var_dtype()
 #      get_var_attributes()
 #      get_var_time_attributes()
-#      ----------------------------
-#      get_abbreviated_var_name()
-#      get_possible_svo_names()
-#      ----------------------------
-#      clear_download_log()
-#      append_download_log()
-#      print_user_choices()
-#      download_data()
-#      show_grid()
 #      -------------------------------
 #      update_datetime_panel()
+#      get_years_from_time_since()
 #      clear_datetime_notes()
 #      append_datetime_notes()
 #      list_to_string()
@@ -107,6 +98,18 @@ import balto_plot as bp
 #      get_new_lon_index_range()
 #      -------------------------------
 #      get_duration()  ## not used yet
+#      ----------------------------
+#      get_download_format()
+#      clear_download_log()
+#      append_download_log()
+#      print_user_choices()
+#      download_data()
+#      show_grid()
+#      -------------------------------
+#      get_opendap_package()    # (in prefs panel)
+#      ----------------------------
+#      get_abbreviated_var_name()
+#      get_possible_svo_names()
 #
 #------------------------------
 # Example GES DISC opendap URL
@@ -744,12 +747,18 @@ class balto_gui:
     #   make_prefs_panel()
     #--------------------------------------------------------------------
     #--------------------------------------------------------------------
-    def get_map_bounds(self, FROM_MAP=True):
+    def get_map_bounds(self, FROM_MAP=True, style='sw_and_ne_corners'):
 
-        #----------------------------------------------
+        #-------------------------------------------------------
         # Notes: ipyleaflet defines "bounds" as:
         #        [[minlat, maxlat], [minlon, maxlon]]
-        #----------------------------------------------
+        #        matplotlib.imshow defines "extent" as:
+        #        extent = [minlon, maxlon, minlat, maxlat]
+        #-------------------------------------------------------
+        #        Return value is a list, not a tuple, but
+        #        ok to use it like this:
+        # [minlon, minlat, maxlon, maxlat] = get_map_bounds().
+        #-------------------------------------------------------
         if (FROM_MAP):
             #------------------------------------      
             # Get the visible map bounds, after
@@ -767,7 +776,6 @@ class balto_gui:
             minlat = self.map_window.south
             maxlon = self.map_window.east
             maxlat = self.map_window.north
-            return (minlon, minlat, maxlon, maxlat)
         else:
             #---------------------------------
             # Get map bounds from text boxes
@@ -776,7 +784,19 @@ class balto_gui:
             minlat = self.map_minlat.value
             maxlon = self.map_maxlon.value
             maxlat = self.map_maxlat.value
-            return (minlon, minlat, maxlon, maxlat)
+
+        #------------------------------------------
+        # Return map bounds in different "styles"
+        #------------------------------------------
+        if (style == 'ipyleaflet'):
+            bounds = [[minlat, maxlat], [minlon, maxlon]]
+        elif (style == 'pyplot_imshow'):
+            bounds = [minlon, maxlon, minlat, maxlat]
+        elif (style == 'sw_and_ne_corner'):
+            bounds = [minlon, minlat, maxlon, maxlat]
+        else:
+            bounds = [minlon, minlat, maxlon, maxlat]
+        return bounds
 
     #   get_map_bounds()
     #--------------------------------------------------------------------
@@ -787,7 +807,7 @@ class balto_gui:
         # Called by m.on_interaction().
         # Don't need to process separate events?
         #-------------------------------------------
-        (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
+        [minlon, minlat, maxlon, maxlat] = self.get_map_bounds()
 
         #--------------------------------        
         # Save new values in text boxes
@@ -821,7 +841,7 @@ class balto_gui:
     #--------------------------------------------------------------------
     def update_map_bounds(self, caller_obj=None):
 
-        (bb_minlon, bb_minlat, bb_maxlon, bb_maxlat) = \
+        [bb_minlon, bb_minlat, bb_maxlon, bb_maxlat] = \
             self.get_map_bounds( FROM_MAP = False )
         bb_midlon = (bb_minlon + bb_maxlon) / 2
         bb_midlat = (bb_minlat + bb_maxlat) / 2 
@@ -876,7 +896,7 @@ class balto_gui:
     #--------------------------------------------------------------------
 #     def zoom_out_to_new_bounds_v0(self, caller_obj=None):
 #      
-#         (bb_minlon, bb_minlat, bb_maxlon, bb_maxlat) = \
+#         [bb_minlon, bb_minlat, bb_maxlon, bb_maxlat] = \
 #             self.get_map_bounds( FROM_MAP = False )
 #         bb_midlon = (bb_minlon + bb_maxlon) / 2
 #         bb_midlat = (bb_minlat + bb_maxlat) / 2 
@@ -894,7 +914,7 @@ class balto_gui:
 #         ## self.map_window.bounds = ((bb_midlat,bb_midlon),(bb_midlat,bb_midlon))
 #         while (True):
 #             # time.sleep(0.5)  ######
-#             (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
+#             [minlon, minlat, maxlon, maxlat] = self.get_map_bounds()
 #             print('minlon, maxlon =', minlon, maxlon )
 #             print('minlat, maxlat =', minlat, maxlat )
 #             if (minlon < bb_minlon) and (maxlon > bb_maxlon) and \
@@ -908,7 +928,7 @@ class balto_gui:
 #                else:
 #                    break
 # 
-#             (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
+#             [minlon, minlat, maxlon, maxlat] = self.get_map_bounds()
 #             print('minlon, maxlon =', minlon, maxlon )
 #             print('minlat, maxlat =', minlat, maxlat )
 #             if (minlon < bb_minlon) and (maxlon > bb_maxlon) and \
@@ -923,17 +943,6 @@ class balto_gui:
 #                    break
 #         
 #     #   zoom_out_to_new_bounds_v0
-    #--------------------------------------------------------------------
-    def get_opendap_package(self):
-    
-        return self.prefs_package.value
-
-    #--------------------------------------------------------------------
-    def get_download_format(self):
-    
-        return self.download_format.value
-        
-    #   get_download_format()
     #--------------------------------------------------------------------
     def get_url_dir_filenames(self):
  
@@ -1288,365 +1297,6 @@ class balto_gui:
     
     #   get_time_attributes()
     #--------------------------------------------------------------------
-    def get_abbreviated_var_name(self, abbreviation ):
-    
-        map = {
-        'lat' : ['geodetic_latitude',  'quantity'],
-        'lon' : ['geodetic_longitude', 'quantity'],
-        'sst' : ['sea_surface__temperature', 'variable'],
-        'temp': ['temperature',  'quantity'],
-        'x'   : ['x-coordinate', 'quantity'],
-        'y'   : ['y-coordinate', 'quantity'],
-        'z'   : ['z-coordinate', 'quantity'] }
-
-        try:
-           return map[ abbreviation ]
-        except:
-           print('Sorry, no matches found for abbreviation.')
-           
-    #   get_abbreviated_var_name()
-    #--------------------------------------------------------------------
-    def get_possible_svo_names(self, var_name, SHOW_IRI=False):
-
-        #-----------------------------------------------------      
-        # Use the SVO "match phrase" service to get a
-        # ranked list of possible SVO variable name matches.
-        #-----------------------------------------------------
-        # var_name should be a list of words, as a single
-        # string, separated by underscores.
-        #-----------------------------------------------------
-        var_name2 = var_name.replace(' ', '_')
-        match_phrase_svc = 'http://34.73.227.230:8000/match_phrase/'    
-        match_phrase_url = match_phrase_svc + var_name2 + '/'
-        print('Working...')
-        
-        #-----------------------------------------------------------------       
-        # The result is in JSON format, for example:
-        # result = { "results": [
-        # {"IRI":"result1_IRI", "label":"result1_label", "matchrank": "result1_rank"},
-        # {"IRI":"result2_IRI", "label":"result2_label", "matchrank": "result2_rank"} ] }
-        #------------------------------------------------------------------        
-        result = requests.get( match_phrase_url )
-        print('Finished.')
-        print()
-        json_str = result.text
-        # print( json_str )
-
-        json_data  = json.loads( json_str )
-        match_list = json_data['results']
-        
-        for item in match_list:
-            ## print('item  =', item)
-            if (SHOW_IRI):
-                print('IRI   =', item['IRI'])
-            print('label =', item['label'])
-            print('rank  =', item['matchrank'])
-            print()
-    
-    #   get_possible_svo_names()
-    #--------------------------------------------------------------------
-    def clear_download_log(self):
-    
-        self.download_log.value = ''
-
-    #   clear_download_log()
-    #--------------------------------------------------------------------
-    def append_download_log(self, msg):
-    
-        ## type_str = str( type(msg) )
-        ## if (type_str == "<class 'list'>"):
-        
-        if (isinstance( msg, list)):
-            for string in msg:
-                self.download_log.value += (string + '\n')
-        else:
-            self.download_log.value += (msg + '\n')
-
-    #   append_download_log()
-    #--------------------------------------------------------------------   
-    def print_user_choices(self):
-
-        if not(hasattr(self, 'dataset')):
-           msg = 'ERROR: No dataset has been selected.'
-           self.append_download_log( msg )
-           return  ############
-       
-        start_datetime_obj = self.get_start_datetime_obj()
-        if (start_datetime_obj is not None):
-            start_date = str( start_datetime_obj.date() )
-            start_time = str( start_datetime_obj.time() )
-        else:
-            start_date = 'unknown'
-            start_time = 'unknown'
-        
-        end_datetime_obj = self.get_end_datetime_obj()
-        if (end_datetime_obj is not None):
-            end_date = str( end_datetime_obj.date() )
-            end_time = str( end_datetime_obj.time() )
-        else:
-            end_date = 'unknown'
-            end_time = 'unknown'
-            
-        #------------------------------------------        
-        # Show message in downloads panel log box
-        #------------------------------------------       
-        msg1 = 'var short name  = ' + self.get_var_shortname()
-        msg2 = 'download format = ' + self.get_download_format()
-        msg3 = 'map bounds = ' + str(self.get_map_bounds( FROM_MAP=False ))
-        msg4 = 'start date and time = ' + start_date + ' ' + start_time
-        msg5 = 'end date and time   = ' + end_date   + ' ' + end_time
-        ## msg6 = 'opendap package = ' + self.get_opendap_package()
-        msgs = [msg1, msg2, msg3, msg4, msg5]
-        self.append_download_log( msgs )
-
-    #   print_user_choices()
-    #--------------------------------------------------------------------
-    def download_data(self, caller_obj=None):
-
-        #-------------------------------------------------
-        # Note: After a reset, self still has a dataset,
-        #       but short_name was reset to ''.
-        #-------------------------------------------------
-        short_name = self.get_var_shortname()
-        if (short_name == ''):
-            msg = 'Sorry, no variable has been selected.'
-            self.download_log.value = msg
-            return
-
-        #----------------------------------------------------
-        # Note: This is called by the "on_click" method of
-        # the "Go" button beside the Dropdown of filenames.
-        # In this case, type(caller_obj) =
-        # <class 'ipywidgets.widgets.widget_button.Button'>
-        #----------------------------------------------------
-        ## status = self.download_status
-        self.print_user_choices()
-        #--------------------------------------------------
-        # print_user_choices() already displayed error msg
-        #--------------------------------------------------
-        if not(hasattr(self, 'dataset')):
-            return
- 
-        #----------------------------------------           
-        # Get names of the variables dimensions
-        #----------------------------------------
-        dim_list = self.dataset[ short_name ].dimensions
-
-        #--------------------------------------
-        # Uncomment to test other time_deltas
-        #------------------------------------------
-        # If test time_delta is too small, we'll
-        # get a start_index that is out of range.
-        # Next 3 worked in some SST tests.
-        #------------------------------------------
-        # self.time_delta = '0000-02-00 00:00:00'
-        # self.time_delta = '0000-00-30 12:00:00'
-        # self.time_delta = '0001-00-00 00:00:00'
-
-        #----------------------------------------------
-        # Is there a time variable ?  If so, use time
-        # range selected in GUI to clip the data.
-        #---------------------------------------------- 
-        (t_i1, t_i2) = self.get_new_time_index_range( REPORT=True)
-           
-        #--------------------------------------------
-        # Is there a lat variable ?  If so, use lat
-        # range selected in GUI to clip the data.
-        # Default is the full range.
-        #--------------------------------------------
-        (lat_i1, lat_i2) = self.get_new_lat_index_range( REPORT=True)
-            
-        #--------------------------------------------
-        # Is there a lon variable ?  If so, use lon
-        # range selected in GUI to clip the data.
-        # Default is the full range.
-        #--------------------------------------------
-        (lon_i1, lon_i2) = self.get_new_lon_index_range( REPORT=True)
-
-        #--------------------------------------        
-        # Did user set a spatial resolution ?
-        #--------------------------------------
-                
-
-        # Asynchronous download. How do we know its here?
-        # print('Downloading variable:', short_name, '...' )
-        # print('Variable saved in: balto.user_var')
-        # print()
-        
-        msg1 = 'Downloading variable: ' + short_name + '...'   
-        msg2 = 'Variable saved in:  balto.user_var'
-        msg3 = ' '
-        self.append_download_log( [msg1, msg2, msg3] )
-
-        #---------------------------------------------        
-        # Convert reference to actual numpy variable
-        # which causes it to be downloaded, and then
-        # store it into balto.user_var.
-        #---------------------------------------------------
-        # This grid includes var and its dimension vectors.
-        # Note:  type(pydap_grid) = pydap.model.GridType
-        #---------------------------------------------------
-        pydap_grid = self.dataset[ short_name ]
-        ndims = len( pydap_grid.dimensions ) # (e.g. time, lat, lon)
-        ## data_obj  = self.dataset[ short_name ]
-        ## data_dims = data_obj.dimensions
-        ## ndim      = len( data_dims )
-
-        #------------------------------------------------
-        # Actually download the data here to a variable
-        # in the notebook, but restrict indices first,
-        # to only download the required data.
-        #------------------------------------------------
-        if (ndims == 3):
-            #-------------------------------------
-            # Assume dims are:  (time, lat, lon)
-            #------------------------------------------
-            # After subscripting, grid still has type:
-            #    pydap.model.GridType
-            #------------------------------------------
-            if (lat_i1 is None) or (lon_i1 is None):
-                if (t_i1 is None):
-                    grid = pydap_grid[:]
-                else:
-                    grid = pydap_grid[t_i1:t_i2, :, :]
-            else:
-                if (t_i1 is None):
-                    grid = pydap_grid[:, lat_i1:lat_i2, lon_i1:lon_i2]
-                else: 
-                    grid = pydap_grid[t_i1:t_i2, lat_i1:lat_i2, lon_i1:lon_i2]
-        #----------------------------------------
-        elif (ndims == 1):  # time series
-            if (t_i1 is None):
-                grid = pydap_grid[:]
-            else:
-                grid = pydap_grid[t_i1:t_i2]
-        #-----------------------------------
-        elif (ndims == 2):  # spatial grid
-            #-------------------------------
-            # Assume dims are:  (lat, lon)
-            #-------------------------------
-            if (lat_i1 is None) or (lon_i1 is None):
-                grid = pydap_grid[:]
-            else:
-                grid = pydap_grid[lat_i1:lat_i2, lon_i1:lon_i2]
-        #------------------------------------
-        else:
-            grid = pydap_grid[:]
-
-        #--------------------------------------------------
-        # Note: type(pydap_grid)   = pydap.model.gridtype
-        #       type(grid)         = pydap.model.gridtype
-        #       type(grid[:].data) = list
-        #       type(grid.data)    = list
-        #--------------------------------------------------
-        # Subscript by *ranges* doesn't change data type.
-        #--------------------------------------------------        
-        grid_list = grid.data   ########
-        n_list    = len(grid_list)
-        var = grid_list[0]
-        
-        # For testing
-        # print('## type(grid) =', type(grid) )
-        # print('## type(grid.data) =', type(grid_list) )
-        # print('## len(grid.data)  =', n_list )
-        # print('## type(var) =', type(var) )
-        # print()
-    
-        if (n_list > 1):
-            times = grid_list[1]
-        if (n_list > 2):
-            lats = grid_list[2]
-        if (n_list > 3):
-            lons = grid_list[3]
-            SIGNED_LONS = True
-            if (SIGNED_LONS):
-                lons = (lons - 180.0)   ####################
- 
-        #-----------------------------      
-        # Is there a missing value ?
-        # Is there a fill value ?
-        #-----------------------------
-        atts = pydap_grid.attributes
-        REPLACE_MISSING = False
-        if ('missing_value' in atts.keys()):
-             REPLACE_MISSING = True
-             missing_value = pydap_grid.attributes['missing_value']
-             w = (var == missing_value)
-                  
-        #---------------------------------------      
-        # Is there a scale factor and offset ?
-        #---------------------------------------
-        if ('scale_factor' in atts.keys()):
-            #---------------------------------------------------
-            # Note: var may have type ">i2" while scale_factor
-            #       may have type "float64", so need to upcast
-            #       var and can't use "*="
-            #---------------------------------------------------
-            factor = pydap_grid.attributes['scale_factor']
-            ## print('type(var) =', type(var))
-            ## print('type(factor) =', type(factor))
-            var = var * factor
-        if ('add_offset' in atts.keys()):
-            offset = pydap_grid.attributes['add_offset']
-            ## print('type(var) =', type(var))
-            ## print('type(offset) =', type(offset))
-            var = var + offset
- 
-        #-----------------------------------------
-        # Restore missing values after scaling ?
-        #-----------------------------------------  
-        if (REPLACE_MISSING):
-            var[w] = missing_value
-
-        #-----------------------------------------           
-        # Save var into balto object as user_var
-        #-----------------------------------------        
-        self.user_var = var
-        self.user_var_times = None
-        self.user_var_lats  = None
-        self.user_var_lons  = None
-        #--------------------------------
-        if (n_list > 1):
-            self.user_var_times = times
-        if (n_list > 2):
-            self.user_var_lats = lats
-        if (n_list > 3):
-            self.user_var_lons = lons
-        
-        #----------------------------------------------------        
-        # Could define self.user_var as a list, and append
-        # new variables to the list as downloaded.
-        # Could also put them into a dictionary.
-        #----------------------------------------------------
-        
-
-    #   download_data()    
-    #--------------------------------------------------------------------
-    def show_grid(self, grid, var_name=None, extent=None,
-                  cmap='rainbow', xsize=8, ysize=8 ):
-
-        #---------------------------------------------------
-        # Note:  extent = [minlon, maxlon, minlat, maxlat]
-        #        But get_map_bounds() returns:
-        #           (minlon, minlat, maxlon, maxlat)
-        #---------------------------------------------------
-        if (grid.ndim != 2):
-            print('Sorry, show_grid() only works for 2D arrays.')
-            return
-        
-        if (var_name is None):
-            var_name = self.data_var_long_name.value
-            ## var_name = self.data_var_name.value
-        if (extent is None):
-            (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
-            extent = [minlon, maxlon, minlat, maxlat]
-        
-        bp.show_grid_as_image( grid, var_name, extent=extent,
-                        cmap='rainbow', xsize=xsize, ysize=ysize )
-                        ## stretch='hist_equal')
-                        ## NO_SHOW=False, im_file=None,
-
-    #   show_grid()
     #--------------------------------------------------------------------
     def update_datetime_panel(self):
  
@@ -1758,12 +1408,19 @@ class balto_gui:
         time_since2    = self.time_range[1]
         start_datetime_obj = self.get_datetime_from_time_since(time_since1)
         end_datetime_obj   = self.get_datetime_from_time_since(time_since2)
-        # start_datetime_obj = self.get_datetime_from_days_since(days_since1)
-        # end_datetime_obj   = self.get_datetime_from_days_since(days_since2)
         start_datetime_str = str(start_datetime_obj)
         end_datetime_str   = str(end_datetime_obj)
         (start_date, start_time) = self.split_datetime_str( start_datetime_str )
         (end_date, end_time)     = self.split_datetime_str( end_datetime_str )
+        #-------------------------------
+        # Save these also, as numbers.
+        #-------------------------------
+        self.start_year = start_datetime_obj.year
+        self.end_year   = end_datetime_obj.year
+        # (y1,m1,d1) = self.split_date_str( start_date )
+        # (y2,m2,d2) = self.split_date_str( end_date )
+        # self.start_year  = y1
+        # self.end_year    = y2
         #-----------------------------------------------------------
         # Be sure to set date values as date_obj, not datetime_obj
         #-----------------------------------------------------------
@@ -1780,6 +1437,40 @@ class balto_gui:
         # self.datetime_end_date.value   = datetime.date(y2, m2, d2)  
         
     #   update_datetime_panel()
+    #-------------------------------------------------------------------- 
+    def get_years_from_time_since(self, data_time_since): 
+
+        #----------------------------------------------------         
+        # Notes:  self.time_var contains "times since" some
+        #         origin time, in days, hours or seconds,
+        #         unrestricted by user start/end times.
+        #         self.time_range[0] = self.time_var.min()
+        #         self.time_range[1] = self.time_var.max()
+        #----------------------------------------------------
+        #         For plots, want to convert these time
+        #         offsets to decimal years, keeping in mind
+        #         that user may have restricted the time
+        #         range further.
+        #----------------------------------------------------
+        units_per_year = {
+        'years':1.0, 'days':365.0, 'hours':8760.0,
+        'minutes':525600.0, 'seconds':31536000.0 }
+        min_data_time_since = self.time_range[0]
+        time_since_start    = (data_time_since - min_data_time_since)
+        #----------------------------------------------------
+        units = self.time_units
+        if (units in units_per_year.keys()):
+            factor = units_per_year[ units ]
+            years_since_start = (time_since_start / factor)
+        else:
+            print('ERROR, Unsupported units:', units)
+            return None
+        #----------------------------------------------------
+        start_year = self.start_year
+        dec_years  = (years_since_start + start_year)
+        return dec_years
+
+    #   get_years_from_time_since()
     #--------------------------------------------------------------------    
     def clear_datetime_notes(self):
 
@@ -2050,11 +1741,12 @@ class balto_gui:
         # numpy.int32 is unsupported time for seconds arg.
         # So here we adjust big numbers for timedelta.
         # The days argument can handle really big numbers.     
-        #---------------------------------------------------     
+        #---------------------------------------------------
+        maxint = 32767    
         units = self.time_units  # ('days', 'hours', etc.)
         n_per_day = {'seconds':86400.0, 'minutes':1440.0,
                      'hours':24.0, 'days':1.0}
-        if (time_since > 32767):
+        if (time_since > maxint):
             time_since = time_since / n_per_day[ units ]
             units = 'days'  # (new units)
 
@@ -2160,8 +1852,8 @@ class balto_gui:
         # such as: '1800-01-01 00:00:00'
         #----------------------------------------------------
         ## origin_datetime_obj = self.origin_datetime_obj
-        days_since_min   = self.time_var.min()
-        min_datetime_obj = self.get_datetime_from_time_since( days_since_min )
+        time_since_min   = self.time_var.min()
+        min_datetime_obj = self.get_datetime_from_time_since( time_since_min )
         
         #-----------------------------------------------        
         # Get current settings from the datetime panel
@@ -2458,6 +2150,12 @@ class balto_gui:
         # Get the array of lons, and info
         #----------------------------------
         lons = self.dataset[ lon_name ][:].data
+
+        #-----------------------------------------        
+        # Convert lons to have range [-180,180]?
+        #-----------------------------------------
+        w = (lons > 180.0)  # array of True or False
+        lons[w] = lons[w] - 360.0
         
         if (lons.ndim > 1):
             msg1 = 'Sorry, cannot yet restrict longitude indices'
@@ -2495,13 +2193,15 @@ class balto_gui:
 
         #------------------------------------------
         # Are the lons in [0,360] or [-180,180] ?
+        # Converted to range [-180, 180] above.
         #------------------------------------------
-        if (maxlon > 180.0):
-            minlon = (minlon - 180.0)
-            maxlon = (maxlon - 180.0)    
+#         if (maxlon > 180.0):
+#             minlon = (minlon - 180.0)
+#             maxlon = (maxlon - 180.0)    
+        if (user_maxlon > 180.0):
+            user_maxlon = (user_maxlon - 360.0)
         if (user_minlon > 180.0):
-            user_minlon = (user_minlon - 180.0) 
-            user_maxlon = (user_maxlon - 180.0)
+            user_minlon = (user_minlon - 360.0)
       
         #--------------------------------------
         # Compute the new, restricted indices
@@ -2632,4 +2332,381 @@ class balto_gui:
     #     return (duration, dur_units)
      
     #   get_duration()
-    #-------------------------------------------------------------------     
+    #--------------------------------------------------------------------
+    def get_download_format(self):
+    
+        return self.download_format.value
+        
+    #   get_download_format()
+    #--------------------------------------------------------------------
+    def clear_download_log(self):
+    
+        self.download_log.value = ''
+
+    #   clear_download_log()
+    #--------------------------------------------------------------------
+    def append_download_log(self, msg):
+    
+        ## type_str = str( type(msg) )
+        ## if (type_str == "<class 'list'>"):
+        
+        if (isinstance( msg, list)):
+            for string in msg:
+                self.download_log.value += (string + '\n')
+        else:
+            self.download_log.value += (msg + '\n')
+
+    #   append_download_log()
+    #--------------------------------------------------------------------   
+    def print_user_choices(self):
+
+        if not(hasattr(self, 'dataset')):
+           msg = 'ERROR: No dataset has been selected.'
+           self.append_download_log( msg )
+           return  ############
+       
+        start_datetime_obj = self.get_start_datetime_obj()
+        if (start_datetime_obj is not None):
+            start_date = str( start_datetime_obj.date() )
+            start_time = str( start_datetime_obj.time() )
+        else:
+            start_date = 'unknown'
+            start_time = 'unknown'
+        
+        end_datetime_obj = self.get_end_datetime_obj()
+        if (end_datetime_obj is not None):
+            end_date = str( end_datetime_obj.date() )
+            end_time = str( end_datetime_obj.time() )
+        else:
+            end_date = 'unknown'
+            end_time = 'unknown'
+            
+        #------------------------------------------        
+        # Show message in downloads panel log box
+        #------------------------------------------       
+        msg1 = 'var short name  = ' + self.get_var_shortname()
+        msg2 = 'download format = ' + self.get_download_format()
+        msg3 = 'map bounds = ' + str(self.get_map_bounds( FROM_MAP=False ))
+        msg4 = 'start date and time = ' + start_date + ' ' + start_time
+        msg5 = 'end date and time   = ' + end_date   + ' ' + end_time
+        ## msg6 = 'opendap package = ' + self.get_opendap_package()
+        msgs = [msg1, msg2, msg3, msg4, msg5]
+        self.append_download_log( msgs )
+
+    #   print_user_choices()
+    #--------------------------------------------------------------------
+    def download_data(self, caller_obj=None):
+
+        #-------------------------------------------------
+        # Note: After a reset, self still has a dataset,
+        #       but short_name was reset to ''.
+        #-------------------------------------------------
+        short_name = self.get_var_shortname()
+        if (short_name == ''):
+            msg = 'Sorry, no variable has been selected.'
+            self.download_log.value = msg
+            return
+
+        #----------------------------------------------------
+        # Note: This is called by the "on_click" method of
+        # the "Go" button beside the Dropdown of filenames.
+        # In this case, type(caller_obj) =
+        # <class 'ipywidgets.widgets.widget_button.Button'>
+        #----------------------------------------------------
+        ## status = self.download_status
+        self.print_user_choices()
+        #--------------------------------------------------
+        # print_user_choices() already displayed error msg
+        #--------------------------------------------------
+        if not(hasattr(self, 'dataset')):
+            return
+ 
+        #----------------------------------------           
+        # Get names of the variables dimensions
+        #----------------------------------------
+        dim_list = self.dataset[ short_name ].dimensions
+
+        #--------------------------------------
+        # Uncomment to test other time_deltas
+        #------------------------------------------
+        # If test time_delta is too small, we'll
+        # get a start_index that is out of range.
+        # Next 3 worked in some SST tests.
+        #------------------------------------------
+        # self.time_delta = '0000-02-00 00:00:00'
+        # self.time_delta = '0000-00-30 12:00:00'
+        # self.time_delta = '0001-00-00 00:00:00'
+
+        #----------------------------------------------
+        # Is there a time variable ?  If so, use time
+        # range selected in GUI to clip the data.
+        #---------------------------------------------- 
+        (t_i1, t_i2) = self.get_new_time_index_range( REPORT=True)
+           
+        #--------------------------------------------
+        # Is there a lat variable ?  If so, use lat
+        # range selected in GUI to clip the data.
+        # Default is the full range.
+        #--------------------------------------------
+        (lat_i1, lat_i2) = self.get_new_lat_index_range( REPORT=True)
+            
+        #--------------------------------------------
+        # Is there a lon variable ?  If so, use lon
+        # range selected in GUI to clip the data.
+        # Default is the full range.
+        #--------------------------------------------
+        (lon_i1, lon_i2) = self.get_new_lon_index_range( REPORT=True)
+
+        #--------------------------------------        
+        # Did user set a spatial resolution ?
+        #--------------------------------------
+                
+
+        # Asynchronous download. How do we know its here?
+        # print('Downloading variable:', short_name, '...' )
+        # print('Variable saved in: balto.user_var')
+        # print()
+        
+        msg1 = 'Downloading variable: ' + short_name + '...'   
+        msg2 = 'Variable saved in:  balto.user_var'
+        msg3 = ' '
+        self.append_download_log( [msg1, msg2, msg3] )
+
+        #---------------------------------------------        
+        # Convert reference to actual numpy variable
+        # which causes it to be downloaded, and then
+        # store it into balto.user_var.
+        #---------------------------------------------------
+        # This grid includes var and its dimension vectors.
+        # Note:  type(pydap_grid) = pydap.model.GridType
+        #---------------------------------------------------
+        pydap_grid = self.dataset[ short_name ]
+        ndims = len( pydap_grid.dimensions ) # (e.g. time, lat, lon)
+        ## data_obj  = self.dataset[ short_name ]
+        ## data_dims = data_obj.dimensions
+        ## ndim      = len( data_dims )
+
+        #------------------------------------------------
+        # Actually download the data here to a variable
+        # in the notebook, but restrict indices first,
+        # to only download the required data.
+        #------------------------------------------------
+        if (ndims == 3):
+            #-------------------------------------
+            # Assume dims are:  (time, lat, lon)
+            #------------------------------------------
+            # After subscripting, grid still has type:
+            #    pydap.model.GridType
+            #------------------------------------------
+            if (lat_i1 is None) or (lon_i1 is None):
+                if (t_i1 is None):
+                    grid = pydap_grid[:]
+                else:
+                    grid = pydap_grid[t_i1:t_i2, :, :]
+            else:
+                if (t_i1 is None):
+                    grid = pydap_grid[:, lat_i1:lat_i2, lon_i1:lon_i2]
+                else: 
+                    grid = pydap_grid[t_i1:t_i2, lat_i1:lat_i2, lon_i1:lon_i2]
+        #----------------------------------------
+        elif (ndims == 1):  # time series
+            if (t_i1 is None):
+                grid = pydap_grid[:]
+            else:
+                grid = pydap_grid[t_i1:t_i2]
+        #-----------------------------------
+        elif (ndims == 2):  # spatial grid
+            #-------------------------------
+            # Assume dims are:  (lat, lon)
+            #-------------------------------
+            if (lat_i1 is None) or (lon_i1 is None):
+                grid = pydap_grid[:]
+            else:
+                grid = pydap_grid[lat_i1:lat_i2, lon_i1:lon_i2]
+        #------------------------------------
+        else:
+            grid = pydap_grid[:]
+
+        #--------------------------------------------------
+        # Note: type(pydap_grid)   = pydap.model.gridtype
+        #       type(grid)         = pydap.model.gridtype
+        #       type(grid[:].data) = list
+        #       type(grid.data)    = list
+        #--------------------------------------------------
+        # Subscript by *ranges* doesn't change data type.
+        #--------------------------------------------------        
+        grid_list = grid.data   ########
+        n_list    = len(grid_list)
+        var = grid_list[0]
+        
+        # For testing
+        # print('## type(grid) =', type(grid) )
+        # print('## type(grid.data) =', type(grid_list) )
+        # print('## len(grid.data)  =', n_list )
+        # print('## type(var) =', type(var) )
+        # print()
+    
+        if (n_list > 1):
+            times = grid_list[1]
+        if (n_list > 2):
+            lats = grid_list[2]
+        if (n_list > 3):
+            lons = grid_list[3]
+            SIGNED_LONS = True
+            if (SIGNED_LONS):
+                lons = (lons - 180.0)   ####################
+ 
+        #-----------------------------      
+        # Is there a missing value ?
+        # Is there a fill value ?
+        #-----------------------------
+        atts = pydap_grid.attributes
+        REPLACE_MISSING = False
+        if ('missing_value' in atts.keys()):
+             REPLACE_MISSING = True
+             missing_value = pydap_grid.attributes['missing_value']
+             w = (var == missing_value)
+                  
+        #---------------------------------------      
+        # Is there a scale factor and offset ?
+        #---------------------------------------
+        if ('scale_factor' in atts.keys()):
+            #---------------------------------------------------
+            # Note: var may have type ">i2" while scale_factor
+            #       may have type "float64", so need to upcast
+            #       var and can't use "*="
+            #---------------------------------------------------
+            factor = pydap_grid.attributes['scale_factor']
+            ## print('type(var) =', type(var))
+            ## print('type(factor) =', type(factor))
+            var = var * factor
+        if ('add_offset' in atts.keys()):
+            offset = pydap_grid.attributes['add_offset']
+            ## print('type(var) =', type(var))
+            ## print('type(offset) =', type(offset))
+            var = var + offset
+ 
+        #-----------------------------------------
+        # Restore missing values after scaling ?
+        #-----------------------------------------  
+        if (REPLACE_MISSING):
+            var[w] = missing_value
+
+        #-----------------------------------------           
+        # Save var into balto object as user_var
+        #-----------------------------------------        
+        self.user_var = var
+        self.user_var_times = None
+        self.user_var_lats  = None
+        self.user_var_lons  = None
+        #--------------------------------
+        if (n_list > 1):
+            self.user_var_times = times
+        if (n_list > 2):
+            self.user_var_lats = lats
+        if (n_list > 3):
+            self.user_var_lons = lons
+        
+        #----------------------------------------------------        
+        # Could define self.user_var as a list, and append
+        # new variables to the list as downloaded.
+        # Could also put them into a dictionary.
+        #----------------------------------------------------
+        
+
+    #   download_data()    
+    #--------------------------------------------------------------------
+    def show_grid(self, grid, var_name=None, extent=None,
+                  cmap='rainbow', xsize=8, ysize=8 ):
+
+        #---------------------------------------------------
+        # Note:  extent = [minlon, maxlon, minlat, maxlat]
+        #        But get_map_bounds() returns:
+        #           (minlon, minlat, maxlon, maxlat)
+        #---------------------------------------------------
+        if (grid.ndim != 2):
+            print('Sorry, show_grid() only works for 2D arrays.')
+            return
+        
+        if (var_name is None):
+            var_name = self.data_var_long_name.value
+            ## var_name = self.data_var_name.value
+        if (extent is None):
+            extent = self.get_map_bounds(style='plt.imshow')
+            ## (minlon, minlat, maxlon, maxlat) = self.get_map_bounds()
+            ## extent = [minlon, maxlon, minlat, maxlat]
+        
+        bp.show_grid_as_image( grid, var_name, extent=extent,
+                        cmap='rainbow', stretch='hist_equal',
+                        xsize=xsize, ysize=ysize,
+                        nodata_value=None )
+                        ## NO_SHOW=False, im_file=None,
+
+    #   show_grid()
+    #--------------------------------------------------------------------
+    def get_opendap_package(self):
+    
+        return self.prefs_package.value
+
+    #--------------------------------------------------------------------
+    def get_abbreviated_var_name(self, abbreviation ):
+    
+        map = {
+        'lat' : ['geodetic_latitude',  'quantity'],
+        'lon' : ['geodetic_longitude', 'quantity'],
+        'sst' : ['sea_surface__temperature', 'variable'],
+        'temp': ['temperature',  'quantity'],
+        'x'   : ['x-coordinate', 'quantity'],
+        'y'   : ['y-coordinate', 'quantity'],
+        'z'   : ['z-coordinate', 'quantity'] }
+
+        try:
+           return map[ abbreviation ]
+        except:
+           print('Sorry, no matches found for abbreviation.')
+           
+    #   get_abbreviated_var_name()
+    #--------------------------------------------------------------------
+    def get_possible_svo_names(self, var_name, SHOW_IRI=False):
+
+        #-----------------------------------------------------      
+        # Use the SVO "match phrase" service to get a
+        # ranked list of possible SVO variable name matches.
+        #-----------------------------------------------------
+        # var_name should be a list of words, as a single
+        # string, separated by underscores.
+        #-----------------------------------------------------
+        var_name2 = var_name.replace(' ', '_')
+        match_phrase_svc = 'http://34.73.227.230:8000/match_phrase/'    
+        match_phrase_url = match_phrase_svc + var_name2 + '/'
+        print('Working...')
+        
+        #-----------------------------------------------------------------       
+        # The result is in JSON format, for example:
+        # result = { "results": [
+        # {"IRI":"result1_IRI", "label":"result1_label", "matchrank": "result1_rank"},
+        # {"IRI":"result2_IRI", "label":"result2_label", "matchrank": "result2_rank"} ] }
+        #------------------------------------------------------------------        
+        result = requests.get( match_phrase_url )
+        print('Finished.')
+        print()
+        json_str = result.text
+        # print( json_str )
+
+        json_data  = json.loads( json_str )
+        match_list = json_data['results']
+        
+        for item in match_list:
+            ## print('item  =', item)
+            if (SHOW_IRI):
+                print('IRI   =', item['IRI'])
+            print('label =', item['label'])
+            print('rank  =', item['matchrank'])
+            print()
+    
+    #   get_possible_svo_names()
+    #-------------------------------------------------------------------
+    
+    
+    
+         

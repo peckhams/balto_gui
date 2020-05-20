@@ -142,12 +142,18 @@ def stretch_grid( grid, stretch, a=1, b=2, p=0.5 ):
 #------------------------------------------------------------------------
 def show_grid_as_image( grid, long_name, extent=None,
                         cmap='rainbow',
+                        stretch_name='hist_equal',
+                        stretch_a = 1.0,
+                        stretch_b = 1.0,
+                        stretch_p = 1.0,
+                        nodata_value=None,
                         NO_SHOW=False, im_file=None,
                         ## stretch='power_stretch3',
                         xsize=8, ysize=8, dpi=None): 
 
     # Note:  extent = [minlon, maxlon, minlat, maxlat]
-    
+    #        See get_map_bounds() in balto_gui.py.
+
     #-------------------------
     # Other color map names
     #--------------------------------------------
@@ -155,6 +161,16 @@ def show_grid_as_image( grid, long_name, extent=None,
     # gist_ncar, gist_stern
     #--------------------------------------------    
 
+    #------------------------------------------
+    # Replace nodata value before the stretch
+    #------------------------------------------
+    grid2 = grid.copy()
+    if (nodata_value is not None):
+        w1    = (grid2 == nodata_value)
+        w2    = np.invert( w1 )
+        gmin  = min(grid2[w2])
+        grid2[ w1 ] = gmin
+    
     #---------------------------------------------
     # Apply stretch function to enhance contrast
     #---------------------------------------------
@@ -162,7 +178,20 @@ def show_grid_as_image( grid, long_name, extent=None,
     # grid2 = stretch_grid( grid, stretch='power_stretch2', a=1000, b=0.5)
     # grid2 = stretch_grid( grid, stretch='power_stretch3', a=1, b=2)
     # grid2 = stretch_grid( grid, stretch='log_stretch', a=1)    
-    grid2 = stretch_grid( grid, stretch='hist_equal') 
+    grid2 = stretch_grid( grid2, stretch=stretch_name, a=stretch_a,
+                          b=stretch_b, p=stretch_p) 
+
+    #-----------------------------------------------
+    # Get new min and max, before replacing nodata
+    #-----------------------------------------------
+    gmin = grid2.min()
+    gmax = grid2.max()
+    
+    #------------------------------------------
+    # Replace the nodata values after stretch
+    #------------------------------------------
+    if (nodata_value is not None):
+        grid2[ w1 ] = nodata_value
 
     #----------------------------
     # Set up and show the image
@@ -173,9 +202,6 @@ def show_grid_as_image( grid, long_name, extent=None,
     ax.set_title( im_title )
     ax.set_xlabel('Longitude [deg]')
     ax.set_ylabel('Latitude [deg]')
-
-    gmin = grid2.min()
-    gmax = grid2.max()
 
     im = ax.imshow(grid2, interpolation='nearest', cmap=cmap,
                    vmin=gmin, vmax=gmax, extent=extent)
