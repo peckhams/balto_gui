@@ -40,7 +40,6 @@ import balto_plot as bp
 #      show_gui()
 #      make_acc_gui()
 #      make_tab_gui()
-#      make_data_panel_v0()
 #      make_data_panel()
 #      reset_data_panel()
 #      make_map_panel()
