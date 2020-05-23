@@ -151,7 +151,7 @@ class balto_gui:
         self.map_height        = 230  # was 250
         self.map_center_init   = (20.0, 0)
         self.add_fullscreen_control = True
-        self.add_scale_control      = True
+        self.add_scale_control      = False   # (doesn't work)
         self.add_measure_control    = True
         #-----------------------------------------------------
         self.gui_width_px  = self.pix_str( self.gui_width )
@@ -181,16 +181,24 @@ class balto_gui:
     def pix_str(self, num):
         return str(num) + 'px'
     #--------------------------------------------------------------------
-    def show_gui(self, ACC_STYLE=False):
+    def show_gui(self, ACC_STYLE=False, SHOW_MAP=True):
+
+        #------------------------------------------------------        
+        # Encountered a problem where there was some problem
+        # with ipyleaflets (used for the map panel) that
+        # prevented any part of the GUI from being displayed.
+        # The SHOW_MAP flag helps to test for this problem.
+        #------------------------------------------------------
 
         #------------------------------------   
         # Create & display the complete GUI
-        #------------------------------------
+        #-----------------------------------
         if (ACC_STYLE):
             self.make_acc_gui()
         else:
             # Use the TAB style
-            self.make_tab_gui()
+            self.make_tab_gui( SHOW_MAP=SHOW_MAP)
+
         gui_output = widgets.Output()
         display(self.gui, gui_output)
   
@@ -242,12 +250,17 @@ class balto_gui:
         
     #   make_acc_gui()
     #--------------------------------------------------------------------
-    def make_tab_gui(self):
+    def make_tab_gui(self, SHOW_MAP=True):
 
+        #---------------------------------------------------------
+        # If there is a problem with ipyleaflet, it can prevent
+        # any part of the GUI from being displayed.  You can
+        # set SHOW_MAP=False to remove the map to test for this.
+        #---------------------------------------------------------
         gui_width_px = self.gui_width_px
         
         self.make_data_panel()
-        self.make_map_panel()
+        self.make_map_panel( SHOW_MAP=SHOW_MAP )
         self.make_datetime_panel()
         self.make_download_panel()
         self.make_prefs_panel()
@@ -263,11 +276,11 @@ class balto_gui:
         p2_title = 'Date Range'
         p3_title = 'Download Data'
         p4_title = 'Settings'
-    
+          
         #-------------------------------------------------------
         # selected_index=0 shows Browse Data panel
-        #-------------------------------------------------------        
-        tab = widgets.Tab( children=[p0, p1, p2, p3, p4],
+        #-------------------------------------------------------
+        tab = widgets.Tab( children=[p0, p1, p2, p3, p4],        
                                  selected_index=0,
                                  layout=Layout(width=gui_width_px) )
         tab.set_title(0, p0_title)
@@ -436,7 +449,7 @@ class balto_gui:
 
     #   reset_data_panel() 
     #--------------------------------------------------------------------    
-    def make_map_panel(self):
+    def make_map_panel(self, SHOW_MAP=True):
 
         map_width_px  = self.map_width_px
         map_height_px = self.map_height_px
@@ -479,14 +492,12 @@ class balto_gui:
         # Does "step=0.01" restrict accuracy of selection ??
         #-----------------------------------------------------
         w1 = widgets.BoundedFloatText(
-            ## value=-180, min=-180, max=180.0, step=0.01,
             value=-180, step=0.01, min=-360, max=360.0,
             description='West edge lon:',
             disabled=False, style=bbox_style,
             layout=Layout(width=bbox_width_px) )
     
         w2 = widgets.BoundedFloatText(
-            ## value=180, min=-180, max=180.0, step=0.01,
             value=180, step=0.01, min=-360, max=360.0,
             description='East edge lon:',
             disabled=False, style=bbox_style,
@@ -529,8 +540,18 @@ class balto_gui:
         pads  = widgets.VBox([pd, pd])
         btns  = widgets.VBox([b1, b2])
         bbox  = widgets.HBox( [lons, lats, pads, btns])
-        panel = widgets.VBox( [m, bbox, bm] )
-        
+
+        #------------------------------------------------------        
+        # Encountered a problem where there was some problem
+        # with ipyleaflets (used for the map panel) that
+        # prevented any part of the GUI from being displayed.
+        # The SHOW_MAP flag helps to test for this problem.
+        #------------------------------------------------------
+        if (SHOW_MAP):
+            panel = widgets.VBox( [m, bbox, bm] )
+        else:
+            panel = widgets.VBox( [bbox, bm] )
+                
         self.map_window  = m
         self.map_minlon  = w1
         self.map_maxlon  = w2
@@ -784,7 +805,7 @@ class balto_gui:
             minlat = self.map_minlat.value
             maxlon = self.map_maxlon.value
             maxlat = self.map_maxlat.value
-
+        
         #------------------------------------------
         # Return map bounds in different "styles"
         #------------------------------------------
