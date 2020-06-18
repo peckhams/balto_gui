@@ -7,7 +7,7 @@ The Python source code to create the GUI and to process events is in a module ca
 
 This GUI consists of mulitiple panels, and supports both a <b>tab-style</b> and an <b>accordion-style</b>, which allows you to switch between GUI panels without scrolling in the notebook.
 
-You can run the notebook in a browser window without installing anything on your computer, using something called Binder. Look for the Binder icon below and a link labeled "Launch Binder".  This sets up a server in the cloud that has all the required dependencies and lets you run the notebook on that server.
+You can run the notebook in a browser window without installing anything on your computer, using something called Binder. Look for the Binder icon below and a link labeled "Launch Binder".  This sets up a server in the cloud that has all the required dependencies and lets you run the notebook on that server.  (Sometimes this takes a while, however.)
 
 To run this Jupyter notebook without Binder, it is recommended to install Python 3.7 from an Anaconda distribution and to then create a conda environment called <b>balto</b>. Simple instructions for how to create a conda environment and install the software are given in Appendix 1 of version 2 (v2) of the notebook.
 
