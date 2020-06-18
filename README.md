@@ -9,12 +9,9 @@ This is an <b>accordion-style GUI</b>, which allows you to switch between GUI pa
 
 You can run the notebook in a browser window without installing anything on your computer, using something called Binder. Look for the Binder icon below and a link labeled "Launch Binder".
 
-To run this Jupyter notebook without Binder, it is recommended to install Python 3.7 from an Anaconda distribution and to then create a conda environment called balto. Instructions for how to create a conda environment are given in Appendix 1 of version 2 of the notebook.
+To run this Jupyter notebook without Binder, it is recommended to install Python 3.7 from an Anaconda distribution and to then create a conda environment called balto. Instructions for how to create a conda environment are given in Appendix 1 of version 2 (v2) of the notebook.
 
-Version 2<br>
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/peckhams/balto_gui/master?filepath=BALTO_GUI_v2.ipynb)
 <br>
 
-Version 1<br>
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/mariutzica/balto_gui/83d7700936c6236b3f890a231664855bea97fe83)
 
