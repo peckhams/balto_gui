@@ -80,16 +80,18 @@ import balto_plot as bp
 #      list_to_string()
 #      -------------------------------
 #      pad_with_zeros()
+#      get_actual_time_units()
 #      get_time_delta_str()
 #      get_datetime_obj_from_str()
+#      get_datetime_obj_from_one_str()
 #      get_start_datetime_obj()
 #      get_end_datetime_obj()
 #      get_dt_from_datetime_str()
 #      split_datetime_str()
 #      split_date_str()
 #      split_time_str()
-#      get_datetime_from_days_since()
-#      get_days_since_from_datetime()
+#      get_datetime_from_time_since()
+#      get_time_since_from_datetime()
 #      get_month_difference()
 #      -------------------------------
 #      get_new_time_index_range()
@@ -1748,61 +1750,101 @@ class balto_gui:
         return (hour, minute, second)
 
     #   split_time_str()
-    #--------------------------------------------------------------------                       
-    def get_datetime_from_time_since(self, time_since):
-
-        # For testing
-#         print('## type(times_since) =', type(time_since) )
-#         print('## time_since =', time_since )
-#         print('## int(time_since) =', int(time_since) )
-        
-        #---------------------------------------------------
-        # datetime.timedelta has limits on inputs, e.g.
-        # numpy.int32 is unsupported time for seconds arg.
-        # So here we adjust big numbers for timedelta.
-        # The days argument can handle really big numbers.     
-        #---------------------------------------------------
-        maxint = 32767    
+    #--------------------------------------------------------------------                      
+	def get_datetime_from_time_since(self, time_since):
+										 
+		# For testing
+	#         print('## type(times_since) =', type(time_since) )
+	#         print('## time_since =', time_since )
+	#         print('## int(time_since) =', int(time_since) )
+	
+		#---------------------------------------------------   
+		# Note: datetime.timedelta() can take integer or
+		#       float arguments, and the arguments can be
+		#       very large numbers.  However, it does not
+		#       accept any numpy types, whether float or
+		#       int (e.g. np.int16, np.float32).
+        # https://docs.python.org/3/library/datetime.html
+		#---------------------------------------------------
         units = self.time_units  # ('days', 'hours', etc.)
-        n_per_day = {'seconds':86400.0, 'minutes':1440.0,
-                     'hours':24.0, 'days':1.0}
-        if (time_since > maxint):
-            time_since = time_since / n_per_day[ units ]
-            units = 'days'  # (new units)
-
-        #-------------------------------------------------
-        # Note: We now save self.time_units_str separate
-        #       from self.time_units.
-        #-------------------------------------------------
-        delta = None
-        if (units == 'days'):
-            delta = datetime.timedelta( days=time_since )
-        if (units == 'hours'):
-            delta = datetime.timedelta( hours=time_since )
-        if (units == 'minutes'):
-            delta = datetime.timedelta( minutes=time_since )
-        if (units == 'seconds'):
-            delta = datetime.timedelta( seconds=time_since )
-        #-----------------------------------------------------
-        if (delta is None):
-            msg = 'ERROR: Units: ' + units + ' not supported.'
+		delta = None
+		time_since2 = float(time_since)  ## No numpy types
+		#------------------------------------------------------    
+		if (units == 'days'):
+			delta = datetime.timedelta( days=time_since2 )
+		if (units == 'hours'):
+			delta = datetime.timedelta( hours=time_since2 )
+		if (units == 'minutes'):
+			delta = datetime.timedelta( minutes=time_since2 )
+		if (units == 'seconds'):
+			delta = datetime.timedelta( seconds=time_since2 )
+		#------------------------------------------------------
+		if (delta is None):
+			msg = 'ERROR: Units: ' + units + ' not supported.'
             self.append_datetime_notes( msg )
             return
 
-        #---------------------------------------------        
-        # Create new datetime object from time_since
-        #---------------------------------------------
-        origin_obj = self.origin_datetime_obj
-        new_dt_obj = (origin_obj + delta)
-        return new_dt_obj
-        
-        # For testing
-        ## print('origin_datetime_obj =', str(origin_obj) )
-        ## print('time_since delta    =', str(delta) )
-        ## print('new_dt_obj          =', str(new_dt_obj) ) 
-        ## return new_dt_obj
+		# For testing
+		## print('#### delta =', delta)
+	
+		#---------------------------------------------        
+		# Create new datetime object from time_since
+		#---------------------------------------------
+		origin_obj = self.origin_datetime_obj
+		new_dt_obj = (origin_obj + delta)
+		return new_dt_obj
 
-    #   get_datetime_from_time_since()
+	#   get_datetime_from_time_since()
+	#--------------------------------------------------------------------                       
+#     def get_datetime_from_time_since_OLD(self, time_since):
+#         
+#         #---------------------------------------------------
+#         # datetime.timedelta has limits on inputs, e.g.
+#         # numpy.int32 is unsupported time for seconds arg.
+#         # So here we adjust big numbers for timedelta.
+#         # The days argument can handle really big numbers.     
+#         #---------------------------------------------------
+#         maxint = 32767    
+#         units = self.time_units  # ('days', 'hours', etc.)
+#         n_per_day = {'seconds':86400.0, 'minutes':1440.0,
+#                      'hours':24.0, 'days':1.0}
+#         if (time_since > maxint):
+#             time_since = time_since / n_per_day[ units ]
+#             units = 'days'  # (new units)
+# 
+#         #-------------------------------------------------
+#         # Note: We now save self.time_units_str separate
+#         #       from self.time_units.
+#         #-------------------------------------------------
+#         delta = None
+#         if (units == 'days'):
+#             delta = datetime.timedelta( days=time_since )
+#         if (units == 'hours'):
+#             delta = datetime.timedelta( hours=time_since )
+#         if (units == 'minutes'):
+#             delta = datetime.timedelta( minutes=time_since )
+#         if (units == 'seconds'):
+#             delta = datetime.timedelta( seconds=time_since )
+#         #-----------------------------------------------------
+#         if (delta is None):
+#             msg = 'ERROR: Units: ' + units + ' not supported.'
+#             self.append_datetime_notes( msg )
+#             return
+# 
+#         #---------------------------------------------        
+#         # Create new datetime object from time_since
+#         #---------------------------------------------
+#         origin_obj = self.origin_datetime_obj
+#         new_dt_obj = (origin_obj + delta)
+#         return new_dt_obj
+#         
+#         # For testing
+#         ## print('origin_datetime_obj =', str(origin_obj) )
+#         ## print('time_since delta    =', str(delta) )
+#         ## print('new_dt_obj          =', str(new_dt_obj) ) 
+#         ## return new_dt_obj
+# 
+#     #   get_datetime_from_time_since()
     #--------------------------------------------------------------------                       
     def get_time_since_from_datetime(self, datetime_obj, units='days'):
 
