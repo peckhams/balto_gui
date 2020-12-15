@@ -2087,7 +2087,7 @@ class balto_gui:
         # Next line type:  <class 'numpy.ndarray'>
         #----------------------------------------------------------                      
         lats = self.dataset[ lat_name ][:].data
-        
+
         if (lats.ndim > 1):
             msg1 = 'Sorry, cannot yet restrict latitude indices'
             msg2 = '   when lat array has more than 1 dimension.'
@@ -2098,51 +2098,72 @@ class balto_gui:
         # print('## lats.shape =', lats.shape )
         # print('## lats =', lats )
 
+        #------------------------------------------------        
+        # It seems that values may be reverse sorted to 
+        # indicate that the origin is upper left corner
+        # Don't sort them, need indices into original.
+        #------------------------------------------------
+        if (lats[0] > lats[-1]):
+            origin = 'upper'
+        else:
+            origin = 'lower'
+            
+        #------------------------------------------
+        # Compute the latitude spacing, dlat
         #------------------------------------------
         # This only works if lats are a 1D list.
         # If a "list of lists", len() will be for
         # the outer list and min() won't work.
         # Also, no "size" attribute, etc.
         #------------------------------------------
-        # Don't want to rely on "actual_range",
-        # because it could be missing or wrong.
-        #------------------------------------------
-        # nlats  = len(lats)
-        # minlat = min(lats)
-        # maxlat = max(lats)
-        #-----------------------
         nlats  = lats.size
         minlat = lats.min()
         maxlat = lats.max()
-        #---------------------------
-        latdif = (maxlat - minlat)
-        if (CENTERS):
-            dlat = (latdif / (nlats - 1))
+        dlat   = np.abs(lats[1] - lats[0])
+        #--------------
+        # Another way
+        #--------------
+#         latdif = (maxlat - minlat)
+#         if (CENTERS):
+#             dlat = (latdif / (nlats - 1))
+#         else:
+#             dlat = (latdif / nlats)
+
+        #--------------------------------------
+        # Compute the new, restricted indices
+        # New method:  (2020-12-12)
+        #--------------------------------------
+        all_indices = np.arange( nlats )
+        w = np.logical_and(lats > user_minlat, lats < user_maxlat)  # boolean array
+        indices = all_indices[w]
+        if (indices.size > 0):
+            lat_i1 = indices[0]
+            lat_i2 = indices[-1]
         else:
-            dlat = (latdif / nlats)
-       
+            lat_i1 = 0
+            lat_i2 = nlats-1
+              
         #--------------------------------------
         # Compute the new, restricted indices
         #--------------------------------------
         # Here, int() behaves like "floor()".
         # So maybe add 1 to lat_i2 ???
         #--------------------------------------
-        lat_i1 = int( (user_minlat - minlat) / dlat )
-        lat_i2 = int( (user_maxlat - minlat) / dlat )
-        lat_i2 = (lat_i2 + 1)  ########
-
+#         lat_i1 = int( (user_minlat - minlat) / dlat )
+#         lat_i2 = int( (user_maxlat - minlat) / dlat )
+#         lat_i2 = (lat_i2 + 1)  ########
         #---------------------------------
         # Make sure indices are in range
         #---------------------------------------- 
-        lat_i1 = min( max(lat_i1, 0), nlats-1 )
-        lat_i2 = min( max(lat_i2, 0), nlats-1 )
+#         lat_i1 = min( max(lat_i1, 0), nlats-1 )
+#         lat_i2 = min( max(lat_i2, 0), nlats-1 )
         #------------------------------------------
         # User region may be smaller than v_dlat,
         # as is the case with Puerto Rico, where
         # data grid cells are 1 deg x 1 deg or so.
         #------------------------------------------        
-        if (lat_i1 == lat_i2):  # (still possible?)
-            lat_i2 = lat_i1 + 1
+#         if (lat_i1 == lat_i2):  # (still possible?)
+#             lat_i2 = lat_i1 + 1
  
         if (REPORT):
             print('lat_name =', lat_name)
@@ -2160,10 +2181,12 @@ class balto_gui:
             i1s  = str(lat_i1)
             i2s  = str(lat_i2)
             msg1 = 'lat_name = ' + lat_name
-            msg2 = 'dlat = ' + str(dlat)
-            msg3 = 'nlats = ' + str(nlats)
-            msg4 = 'New latitude indices = ' + i1s + ', ' + i2s
-            self.append_download_log([msg1, msg2, msg3, msg4, ' '])
+            msg2 = 'dlat     = ' + str(dlat)
+            msg3 = 'nlats    = ' + str(nlats)
+            msg4 = 'min, max = ' + str(minlat) + ', ' + str(maxlat) + ' (data)'
+            msg5 = 'min, max = ' + str(user_minlat) + ', ' + str(user_maxlat) + ' (user)'
+            msg6 = 'New latitude indices = ' + i1s + ', ' + i2s
+            self.append_download_log([msg1, msg2, msg3, msg4, msg5, msg6, ' '])
                         
         return (lat_i1, lat_i2)
 
@@ -2194,7 +2217,7 @@ class balto_gui:
             return (None, None)
 
         #-------------------------------------------- 
-        # Are lats for grid cell edges or centers ?
+        # Are lons for grid cell edges or centers ?
         #-------------------------------------------- 
         att_dict = self.dataset[ lon_name ].attributes
         CENTERS = False
@@ -2212,13 +2235,7 @@ class balto_gui:
         # Get the array of lons, and info
         #----------------------------------
         lons = self.dataset[ lon_name ][:].data
-
-        #-----------------------------------------        
-        # Convert lons to have range [-180,180]?
-        #-----------------------------------------
-        w = (lons > 180.0)  # array of True or False
-        lons[w] = lons[w] - 360.0
-        
+       
         if (lons.ndim > 1):
             msg1 = 'Sorry, cannot yet restrict longitude indices'
             msg2 = '   when lon array has more than 1 dimension.'
@@ -2228,65 +2245,81 @@ class balto_gui:
         # print('## type(lons) =', type(lons) )
         # print('## lons.shape =', lons.shape )
         # print('## lons.ndim  =', lons.ndim )
-        
+
+        #------------------------------------------      
+        # Compute the longitude spacing, dlon  
         #------------------------------------------
         # This only works if lons are a 1D list.
         # If a "list of lists", len() will be for
         # the outer list and min() won't work.
         # Also, no "size" attribute, etc.
         #------------------------------------------
-        # Don't want to rely on "actual_range",
-        # because it could be missing or wrong.
-        #------------------------------------------
-        # nlons  = len(lons)
-        # minlon = min(lons)
-        # maxlon = max(lons)
-        #---------------------------
-        ## lons   = np.array( lons, dtype='float64' )
         nlons  = lons.size
         minlon = lons.min()
         maxlon = lons.max()
-        #---------------------------
-        londif = (maxlon - minlon)
-        if (CENTERS):
-            dlon = (londif / (nlons - 1))
-        else:
-            dlon = (londif / nlons)
+        dlon   = np.abs(lons[1] - lons[0])
+        #--------------
+        # Another way
+        #--------------
+#         londif = (maxlon - minlon)
+#         if (CENTERS):
+#             dlon = (londif / (nlons - 1))
+#         else:
+#             dlon = (londif / nlons)
 
-        #------------------------------------------
-        # Are the lons in [0,360] or [-180,180] ?
-        # Converted to range [-180, 180] above.
-        #------------------------------------------
-#         if (maxlon > 180.0):
-#             minlon = (minlon - 180.0)
-#             maxlon = (maxlon - 180.0)    
-        if (user_maxlon > 180.0):
-            user_maxlon = (user_maxlon - 360.0)
-        if (user_minlon > 180.0):
-            user_minlon = (user_minlon - 360.0)
-      
+        #-----------------------------------------        
+        # Convert lons to have range [-180,180]?
+        #-----------------------------------------
+#         lons = ((lons + 180.0) % 360) - 180
+#         lons.sort()  #####################
+#         user_maxlon = ((user_maxlon + 180.0) % 360) - 180
+#         user_minlon = ((user_minlon + 180.0) % 360) - 180
+#         if (user_minlon > user_maxlon):
+#             user_minlon -= 180.0
+
+        #-------------------------------------------        
+        # Convert user lons to have range [0,360]?
+        #-------------------------------------------
+        if (minlon >= 0) and (maxlon <= 360):
+            user_minlon = (user_minlon + 360.0) % 360
+            user_maxlon = (user_maxlon + 360.0) % 360
+
+        #--------------------------------------
+        # Compute the new, restricted indices
+        # New method:  (2020-12-12)
+        #--------------------------------------
+        all_indices = np.arange( nlons )
+        w = np.logical_and(lons > user_minlon, lons < user_maxlon)  # boolean array
+        indices = all_indices[w]
+        if (indices.size > 0):
+            lon_i1 = indices[0]
+            lon_i2 = indices[-1]
+        else:
+            lon_i1 = 0
+            lon_i2 = nlons-1
+                  
         #--------------------------------------
         # Compute the new, restricted indices
         #--------------------------------------
         # Here, int() behaves like "floor()".
         # So maybe add 1 to lon_i2 ???
         #-------------------------------------- 
-        lon_i1 = int( (user_minlon - minlon) / dlon )
-        lon_i2 = int( (user_maxlon - minlon) / dlon )
-        lon_i2 = lon_i2 + 1   #######
+#         lon_i1 = int( (user_minlon - minlon) / dlon )
+#         lon_i2 = int( (user_maxlon - minlon) / dlon )
+#         lon_i2 = lon_i2 + 1   #######
 
         #---------------------------------
         # Make sure indices are in range
         #---------------------------------------- 
-        lon_i1 = min( max(lon_i1, 0), nlons-1 )
-        lon_i2 = min( max(lon_i2, 0), nlons-1 )
+#         lon_i1 = min( max(lon_i1, 0), nlons-1 )
+#         lon_i2 = min( max(lon_i2, 0), nlons-1 )
         #------------------------------------------
         # User region may be smaller than v_dlat,
         # as is the case with Puerto Rico, where
         # data grid cells are 1 deg x 1 deg or so.
         #------------------------------------------        
-        if (lon_i1 == lon_i2):   # (still needed?)
-            lon_i2 = lon_i1 + 1
+#         if (lon_i1 == lon_i2):   # (still needed?)
+#             lon_i2 = lon_i1 + 1
 
         if (REPORT):
             print()
@@ -2305,10 +2338,12 @@ class balto_gui:
             i1s  = str(lon_i1)
             i2s  = str(lon_i2)
             msg1 = 'lon_name = ' + lon_name
-            msg2 = 'dlon = ' + str(dlon)
-            msg3 = 'nlons = ' + str(nlons)
-            msg4 = 'New longitude indices = ' + i1s + ', ' + i2s
-            self.append_download_log([msg1, msg2, msg3, msg4, ' '])
+            msg2 = 'dlon     = ' + str(dlon)
+            msg3 = 'nlons    = ' + str(nlons)
+            msg4 = 'min, max = ' + str(minlon) + ', ' + str(maxlon) + ' (data)'
+            msg5 = 'min, max = ' + str(user_minlon) + ', ' + str(user_maxlon) + ' (user)'
+            msg6 = 'New longitude indices = ' + i1s + ', ' + i2s
+            self.append_download_log([msg1, msg2, msg3, msg4, msg5, msg6, ' '])
 
         return (lon_i1, lon_i2)
 
@@ -2608,16 +2643,41 @@ class balto_gui:
         # print('## type(var) =', type(var) )
         # print()
     
+        times = None   # (defaults)
+        lats  = None
+        lons  = None
         if (n_list > 1):
             times = grid_list[1]
         if (n_list > 2):
             lats = grid_list[2]
         if (n_list > 3):
             lons = grid_list[3]
-            SIGNED_LONS = True
-            if (SIGNED_LONS):
-                lons = (lons - 180.0)   ####################
- 
+
+        #----------------------------------------------
+        # Are lats in reverse order ?  (2020-12-12)
+        # MUST DO THIS BEFORE SUBSETTING WITH INDICES
+        #----------------------------------------------
+#         origin = None
+#         if (lats is not None):
+#             if (lats[0] > lats[-1]):
+#                 origin = 'upper'    # (row major?)
+#                 lats.sort()    #############################
+#             else:
+#                 origin = 'lower'
+
+        #----------------------------------------------      
+        # Adjust the longitudes ?
+        # MUST DO THIS BEFORE SUBSETTING WITH INDICES
+        #----------------------------------------------
+#         if (n_list > 3):
+#             SIGNED_LONS = True
+#             if (SIGNED_LONS):
+#                 #----------------------------------------        
+#                 # Convert lons to have range [-180,180]
+#                 #----------------------------------------
+#                 lons = ((lons + 180.0) % 360) - 180
+#                 lons.sort()    #################
+               
         #-----------------------------      
         # Is there a missing value ?
         # Is there a fill value ?
@@ -2658,16 +2718,9 @@ class balto_gui:
         # Save var into balto object as user_var
         #-----------------------------------------        
         self.user_var = var
-        self.user_var_times = None
-        self.user_var_lats  = None
-        self.user_var_lons  = None
-        #--------------------------------
-        if (n_list > 1):
-            self.user_var_times = times
-        if (n_list > 2):
-            self.user_var_lats = lats
-        if (n_list > 3):
-            self.user_var_lons = lons
+        self.user_var_times = times   # (maybe None)
+        self.user_var_lats  = lats    # (maybe None)
+        self.user_var_lons  = lons    # (maybe None)
         
         #----------------------------------------------------        
         # Could define self.user_var as a list, and append

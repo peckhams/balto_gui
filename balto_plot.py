@@ -7,9 +7,13 @@ BALTO GUI app.  It should be included in the same directory as
 #
 #  Copyright (C) 2020.  Scott D. Peckham
 #
+#  Added use of cartopy in 2020-11 to 2020-12.
+#
 #------------------------------------------------------------------------
 
 import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 import numpy as np
 
 #------------------------------------------------------------------------
@@ -140,6 +144,164 @@ def stretch_grid( grid, stretch, a=1, b=2, p=0.5 ):
  
 #   stretch_grid()
 #------------------------------------------------------------------------
+def get_map_projection( proj_name,
+        central_longitude=0.0, central_latitude=0.0,
+        false_easting=0.0, false_northing=0.0, globe=None,
+        standard_parallels=(20.0, 50.0),
+        scale_factor=None,
+        min_latitude=-80.0, max_latitude=84.0,
+        true_scale_latitude=None, latitude_true_scale=None,  ### BOTH
+        secant_latitudes=None,
+        pole_longitude=0.0, pole_latitude=90.0,
+        central_rotated_longitude=0.0, sweep_axis='y',
+        satellite_height=35785831, cutoff=-30, approx=None,
+        southern_hemisphere=False, zone=15):   #### numeric UTM zone
+
+    proj_name = proj_name.lower()
+    
+    if (proj_name == 'albersequalarea'):
+        proj = ccrs.AlbersEqualArea(central_longitude=central_longitude,
+                    central_latitude=central_latitude, 
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe,
+                    standard_parallels=standard_parallels)
+    elif (proj_name == 'azimuthalequidistant'):
+        proj = ccrs.AzimuthalEquidistant(central_longitude=central_longitude,
+                    central_latitude=central_latitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)
+    elif (proj_name == 'equidistantconic'):
+        proj = ccrs.EquidistantConic(central_longitude=central_longitude,
+                    central_latitude=central_latitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe,
+                    standard_parallels=standard_parallels)
+    elif (proj_name == 'lambertconformal'):
+        proj = ccrs.LambertConformal(central_longitude=-96.0,      ##########
+                    central_latitude=39.0,                         ##########
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe,
+                    secant_latitudes=None,
+                    standard_parallels=None,   ## default: (33,45)
+                    cutoff=cutoff)
+    elif (proj_name == 'lambertcylindrical'):
+        proj = ccrs.LambertCylindrical(central_longitude=central_longitude)
+    elif (proj_name == 'mercator'):
+        proj = ccrs.Mercator(central_longitude=central_longitude,
+                    min_latitude=min_latitude, max_latitude=max_latitude,
+                    latitude_true_scale=latitude_true_scale,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe,
+                    scale_factor=None)   #########
+    elif (proj_name == 'miller'):
+        proj = ccrs.Miller(central_longitude=central_longitude, globe=globe)    
+    elif (proj_name == 'mollweide'):
+        proj = ccrs.Mollweide(central_longitude=central_longitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)
+    elif (proj_name == 'orthographic'):
+        proj = ccrs.Orthographic(central_longitude=central_longitude,
+                    central_latitude=central_latitude, globe=globe)
+    elif (proj_name == 'robinson'):
+        proj = ccrs.Robinson(central_longitude=central_longitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)    
+    elif (proj_name == 'sinusoidal'):
+        proj = ccrs.Sinusoidal(central_longitude=central_longitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)
+    elif (proj_name == 'stereographic'):    
+        proj = ccrs.Stereographic(central_latitude=central_latitude,
+                    central_longitude=central_longitude, 
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe,
+                    true_scale_latitude=true_scale_latitude,
+                    scale_factor=scale_factor)
+    elif (proj_name == 'transversemercator'):
+        proj = ccrs.TransverseMercator(central_longitude=central_longitude,
+                    central_latitude=central_latitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe,
+                    scale_factor=1.0,  ##########
+                    approx=approx)
+    elif (proj_name == 'utm'):
+        proj = ccrs.UTM(zone, southern_hemisphere=southern_hemisphere, globe=globe)
+    elif (proj_name == 'interruptedgoodehomolosine'):
+        proj = ccrs.InterruptedGoodeHomolosine(central_longitude=central_longitude,
+                    globe=globe)    
+    elif (proj_name == 'rotatedpole'):
+        proj = ccrs.RotatedPole(pole_longitude=pole_longitude,
+                    pole_latitude=pole_latitude, globe=globe,
+                    central_rotated_longitude=central_rotated_longitude)     
+    elif (proj_name == 'osgb'):
+        proj = ccrs.OSGB(approx=approx)    
+    elif (proj_name == 'europp'):
+        proj = ccrs.EuroPP    
+    elif (proj_name == 'geostationary'):
+        proj = ccrs.Geostationary(central_longitude=central_longitude,
+                    satellite_height=satellite_height,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe,
+                    sweep_axis=sweep_axis)
+    elif (proj_name == 'nearsideperspective'):
+        proj = ccrs.NearsidePerspective(central_longitude=central_longitude,
+                    central_latitude=central_latitude,
+                    satellite_height=satellite_height,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)       
+    elif (proj_name == 'eckerti'):
+        proj = ccrs.EckertI(central_longitude=central_longitude, 
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)    
+    elif (proj_name == 'eckertii'):
+        proj = ccrs.EckertII(central_longitude=central_longitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)
+    elif (proj_name == 'eckertiii'):
+        proj = ccrs.EckertIII(central_longitude=central_longitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)
+    elif (proj_name == 'eckertiv'):
+        proj = ccrs.EckertIV(central_longitude=central_longitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)
+    elif (proj_name == 'eckertv'):
+        proj = ccrs.EckertV(central_longitude=central_longitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)    
+    elif (proj_name == 'eckertvi'):
+        proj = ccrs.EckertVI(central_longitude=central_longitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe) 
+    elif (proj_name == 'equalearth'):
+        proj = ccrs.EqualEarth(central_longitude=central_longitude,
+                    false_easting=false_easting,
+                    false_northing=false_northing, globe=globe)    
+    elif (proj_name == 'gnomonic'):
+        proj = ccrs.Gnomonic(central_latitude=central_latitude,
+                    central_longitude=central_longitude, globe=globe)
+    elif (proj_name == 'lambertazimuthalequalarea'):
+        proj = ccrs.LambertAzimuthalEqualArea(central_longitude=central_longitude,
+                    central_latitude=central_latitude, globe=globe,
+                    false_easting=false_easting,
+                    false_northing=false_northing)
+    elif (proj_name == 'northpolarstereo'):
+        proj = ccrs.NorthPolarStereo(central_longitude=central_longitude,
+                    true_scale_latitude=true_scale_latitude, globe=globe)  
+    elif (proj_name == 'osni'):
+        proj = ccrs.OSNI(approx=approx)    
+    elif (proj_name == 'southpolarstereo'):
+        proj = ccrs.SouthPolarStereo(central_longitude=central_longitude,
+                    true_scale_latitude=true_scale_latitude, globe=globe)
+    else:
+        # This is same as "Geographic coordinates"
+        proj = ccrs.PlateCarree(central_longitude=central_longitude,
+                    globe=globe)
+                                             
+    return proj    
+
+#   get_map_projection()
+#------------------------------------------------------------------------
 def show_grid_as_image( grid, long_name, extent=None,
                         cmap='rainbow',
                         stretch_name='hist_equal',
@@ -147,6 +309,9 @@ def show_grid_as_image( grid, long_name, extent=None,
                         stretch_b = 1.0,
                         stretch_p = 1.0,
                         nodata_value=None,
+                        interp_method='nearest',
+                        ## crs='platecarree',  # for Geographic coordinates
+                        projection='mercator',
                         NO_SHOW=False, im_file=None,
                         ## stretch='power_stretch3',
                         xsize=8, ysize=8, dpi=None): 
@@ -191,20 +356,111 @@ def show_grid_as_image( grid, long_name, extent=None,
     # Replace the nodata values after stretch
     #------------------------------------------
     if (nodata_value is not None):
-        grid2[ w1 ] = nodata_value
+        grid2[ w1 ] = np.nan   # 2020-12-11
+        ### grid2[ w1 ] = nodata_value
 
+    #-------------------------------------------
+    # Create figure and axes (without cartopy)
+    #--------------------------------------------
+    # balto_crs  = None
+    # fig, ax = plt.subplots( figsize=(xsize, ysize), dpi=dpi )
+    #----------------------------------------------------------
+    # balto_crs  = None
+    # balto_proj = None
+    # fig = plt.figure( figsize=(xsize, ysize), dpi=dpi )
+    # ax  = fig.add_subplot(1,1,1, projection=balto_proj)
+    ## ax.set_extent( extent, crs=balto_crs )  ##### NOT WORKING
+
+    #-------------------------
+    # Set the map projection
+    #--------------------------------------------
+    # extent = [minlon, maxlon, minlat, maxlat]
+    #--------------------------------------------
+    center_lon = (extent[0] + extent[1]) / 2.0
+    center_lat = (extent[2] + extent[3]) / 2.0
+    min_lat    = extent[2]
+    max_lat    = extent[3]
+    print('Extent =', extent )
+    #-------------------------------------------------------
+    # See:  https://scitools.org.uk/cartopy/docs/latest/
+    #               tutorials/understanding_transform.html
+    #-------------------------------------------------------
+    balto_crs  = ccrs.PlateCarree()   # For Geographic lon/lat coordinates.
+    projection = projection.lower()
+    balto_proj = get_map_projection(projection, globe=None,
+                     central_longitude=center_lon,
+                     central_latitude=center_lat,
+                     false_easting=0.0, false_northing=0.0,
+                     standard_parallels=(20.0, 50.0), scale_factor=None,
+                     min_latitude=-80.0, max_latitude=84.0,
+                     true_scale_latitude=None, latitude_true_scale=None,  ### BOTH
+                     secant_latitudes=None,
+                     pole_longitude=0.0, pole_latitude=90.0,
+                     central_rotated_longitude=0.0, sweep_axis='y',
+                     satellite_height=35785831, cutoff=-30, approx=None,
+                     southern_hemisphere=False, zone=15)  ######         
+    
+    #------------------------------------------------
+    # Create figure and axes (matplotlib + cartopy)
+    #------------------------------------------------
+    # First 3 args to subplot: ncols, nrows, index for the subplots
+    fig = plt.figure( figsize=(xsize, ysize), dpi=dpi )
+    ax  = fig.add_subplot(1,1,1, projection=balto_proj)
+    ax.set_extent( extent, crs=balto_crs )
+    ## ax.set_xlim([extent[0], extent[1]])
+    ## ax.set_ylim([extent[2], extent[3]])
+
+    GRIDLINES = True
+    if (GRIDLINES):
+        ## DRAW_LABELS = (projection == 'platecarree')  # (unsupported otherwise)
+        DRAW_LABELS = False   # Now done by other means
+        gl = ax.gridlines(crs=balto_crs, draw_labels=DRAW_LABELS, linewidth=2,
+                          color='gray', alpha=0.5, linestyle='--')
+    # ax.add_feature(cfeature.COASTLINE)  # placed wrong ###########
+    # ax.add_feature(cfeature.COASTLINE, extent=extent) # no extent keyword  
+    # ax.add_feature(cfeature.BORDERS)
+    # ax.add_feature(cfeature.RIVERS)
+    # ax.add_feature(cfeature.LAND)    # (raster?)
+    # ax.add_feature(cfeature.OCEAN)   # (raster?)
+    # ax.add_feature(cfeature.LAKES)   # (raster?)
+              
     #----------------------------
-    # Set up and show the image
+    # Set title and axis labels
     #----------------------------
-    # figure = plt.figure(1, figsize=(xsize, ysize))
-    fig, ax = plt.subplots( figsize=(xsize, ysize), dpi=dpi)
     im_title = long_name.replace('_', ' ').title()
     ax.set_title( im_title )
     ax.set_xlabel('Longitude [deg]')
     ax.set_ylabel('Latitude [deg]')
+    #----------------------------------------------------
+    # Need next 2 lines as work-around for cartopy bug
+    # that prevents axis labels from showing.
+    # https://stackoverflow.com/questions/35479508/
+    # cartopy-set-xlabel-set-ylabel-not-ticklabels
+    #----------------------------------------------------
+    ax.set_xticks(ax.get_xticks())
+    ax.set_yticks(ax.get_yticks())
+    ## ax.set_xticks(ax.get_xticks()[abs(ax.get_xticks())<=360])
+    ## ax.set_yticks(ax.get_yticks()[abs(ax.get_yticks())<=90])
 
-    im = ax.imshow(grid2, interpolation='nearest', cmap=cmap,
-                   vmin=gmin, vmax=gmax, extent=extent)
+    #------------------------------------
+    # New code to use cartopy (2020-11)
+    #------------------------------------
+    ## balto_crs = ccrs.PlateCarree()
+    ## balto_crs = ccrs.PlateCarree(central_longitude=center_lon)
+#     im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+#                    vmin=gmin, vmax=gmax, extent=extent)
+    im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+                   vmin=gmin, vmax=gmax, extent=extent, transform=balto_crs)
+#     im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+#                    vmin=gmin, vmax=gmax, transform=balto_crs)
+                       
+    #----------------------------------     
+    # Old code, before use of cartopy
+    #----------------------------------
+    # im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+    #                vmin=gmin, vmax=gmax)                   
+    # im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+    #                vmin=gmin, vmax=gmax, extent=extent)
 
     #--------------------------------------------------------        
     # NOTE!  Must save before "showing" or get blank image.
