@@ -14,8 +14,6 @@ To run this Jupyter notebook without Binder, it is recommended to install Python
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/peckhams/balto_gui/master?filepath=BALTO_GUI_v2.ipynb)
 <br>
 
-#1740696
-
 [![NSF-1740696](https://img.shields.io/badge/NSF-1740696-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1740696)
 <br>
 
