@@ -311,7 +311,219 @@ def show_grid_as_image( grid, long_name, extent=None,
                         nodata_value=None,
                         interp_method='nearest',
                         ## crs='platecarree',  # for Geographic coordinates
-                        projection='mercator',
+                        proj_name='mercator',
+                        projection=None,
+                        NO_SHOW=False, im_file=None,
+                        ## stretch='power_stretch3',
+                        xsize=8, ysize=8, dpi=None): 
+
+    # Note:  extent = [minlon, maxlon, minlat, maxlat]
+    #        See get_map_bounds() in balto_gui.py.
+
+    #-------------------------
+    # Other color map names
+    #--------------------------------------------
+    # hsv, jet, gist_rainbow (reverse rainbow),
+    # gist_ncar, gist_stern
+    #--------------------------------------------    
+
+    #------------------------------------------
+    # Replace nodata value before the stretch
+    #------------------------------------------
+    grid2 = grid.copy()
+    if (nodata_value is not None):
+        w1    = (grid2 == nodata_value)
+        w2    = np.invert( w1 )
+        gmin  = min(grid2[w2])
+        grid2[ w1 ] = gmin
+    
+    #---------------------------------------------
+    # Apply stretch function to enhance contrast
+    #---------------------------------------------
+    # grid2 = stretch_grid( grid, stretch='power_stretch1', p=0.4)
+    # grid2 = stretch_grid( grid, stretch='power_stretch2', a=1000, b=0.5)
+    # grid2 = stretch_grid( grid, stretch='power_stretch3', a=1, b=2)
+    # grid2 = stretch_grid( grid, stretch='log_stretch', a=1)    
+    grid2 = stretch_grid( grid2, stretch=stretch_name, a=stretch_a,
+                          b=stretch_b, p=stretch_p) 
+
+    #-----------------------------------------------
+    # Get new min and max, before replacing nodata
+    #-----------------------------------------------
+    gmin = grid2.min()
+    gmax = grid2.max()
+    # print('gmin =', gmin)
+    # print('gmax =', gmax)
+    # print('shape =', grid2.shape)
+
+    #------------------------------------------
+    # Replace the nodata values after stretch
+    #------------------------------------------
+    if (nodata_value is not None):
+        grid2[ w1 ] = np.nan   # 2020-12-11
+        ### grid2[ w1 ] = nodata_value
+
+    #-------------------------------------------
+    # Create figure and axes (without cartopy)
+    #--------------------------------------------
+    # balto_crs  = None
+    # fig, ax = plt.subplots( figsize=(xsize, ysize), dpi=dpi )
+    #----------------------------------------------------------
+    # balto_crs  = None
+    # balto_proj = None
+    # fig = plt.figure( figsize=(xsize, ysize), dpi=dpi )
+    # ax  = fig.add_subplot(1,1,1, projection=balto_proj)
+    ## ax.set_extent( extent, crs=balto_crs )  ##### NOT WORKING
+
+    #--------------------------------------------
+    # Set the CRS (Coordinate Reference System)
+    #-------------------------------------------------------
+    # See:  https://scitools.org.uk/cartopy/docs/latest/
+    #               tutorials/understanding_transform.html
+    #-------------------------------------------------------
+    use_cartopy = False
+    if (use_cartopy):
+        balto_crs = ccrs.PlateCarree()   # For Geographic lon/lat coordinates.
+    
+        #-------------------------
+        # Set the map projection
+        #--------------------------------------------
+        # extent = [minlon, maxlon, minlat, maxlat]
+        #--------------------------------------------
+        center_lon = (extent[0] + extent[1]) / 2.0
+        center_lat = (extent[2] + extent[3]) / 2.0
+        min_lat    = extent[2]
+        max_lat    = extent[3]
+        print('Extent =', extent )
+
+        if (projection is not None):
+            balto_proj = projection
+        else:
+            #------------------------------------------------
+            # This option requires using parameter defaults
+            #------------------------------------------------
+            proj_name = proj_name.lower()
+            balto_proj = get_map_projection(proj_name, globe=None,
+                             central_longitude=center_lon,
+                             central_latitude=center_lat,
+                             false_easting=0.0, false_northing=0.0,
+                             standard_parallels=(20.0, 50.0), scale_factor=None,
+                             min_latitude=-80.0, max_latitude=84.0,
+                             true_scale_latitude=None, latitude_true_scale=None,  ### BOTH
+                             secant_latitudes=None,
+                             pole_longitude=0.0, pole_latitude=90.0,
+                             central_rotated_longitude=0.0, sweep_axis='y',
+                             satellite_height=35785831, cutoff=-30, approx=None,
+                             southern_hemisphere=False, zone=15)  ######
+                             
+        #------------------------------------------------
+        # Create figure and axes (matplotlib + cartopy)
+        #------------------------------------------------
+        # First 3 args to subplot: ncols, nrows, index for the subplots
+        fig = plt.figure( figsize=(xsize, ysize), dpi=dpi )
+        ax  = fig.add_subplot(1,1,1, projection=balto_proj)
+        ax.set_extent( extent, crs=balto_crs )
+        ## ax.set_xlim([extent[0], extent[1]])
+        ## ax.set_ylim([extent[2], extent[3]])
+    else:  
+        #------------------------------------------------
+        # Create figure and axes (matplotlib + cartopy)
+        #------------------------------------------------
+        # First 3 args to subplot: ncols, nrows, index for the subplots
+        fig = plt.figure( figsize=(xsize, ysize), dpi=dpi )
+        ax  = fig.add_subplot(1,1,1)
+        ## ax.set_extent( extent)
+        ax.set_xlim([extent[0], extent[1]])
+        ax.set_ylim([extent[2], extent[3]])
+        
+    GRIDLINES = use_cartopy  ######
+    if (GRIDLINES):
+        ## DRAW_LABELS = (projection == 'platecarree')  # (unsupported otherwise)
+        DRAW_LABELS = False   # Now done by other means
+        gl = ax.gridlines(crs=balto_crs, draw_labels=DRAW_LABELS, linewidth=2,
+                          color='gray', alpha=0.5, linestyle='--')
+    # ax.add_feature(cfeature.COASTLINE)  # placed wrong ###########
+    # ax.add_feature(cfeature.COASTLINE, extent=extent) # no extent keyword  
+    # ax.add_feature(cfeature.BORDERS)
+    # ax.add_feature(cfeature.RIVERS)
+    # ax.add_feature(cfeature.LAND)    # (raster?)
+    # ax.add_feature(cfeature.OCEAN)   # (raster?)
+    # ax.add_feature(cfeature.LAKES)   # (raster?)
+              
+    #----------------------------
+    # Set title and axis labels
+    #----------------------------
+    im_title = long_name.replace('_', ' ').title()
+    ax.set_title( im_title )
+    ax.set_xlabel('Longitude [deg]')
+    ax.set_ylabel('Latitude [deg]')
+    #----------------------------------------------------
+    # Need next 2 lines as work-around for cartopy bug
+    # that prevents axis labels from showing.
+    # https://stackoverflow.com/questions/35479508/
+    # cartopy-set-xlabel-set-ylabel-not-ticklabels
+    #----------------------------------------------------
+    ax.set_xticks(ax.get_xticks())
+    ax.set_yticks(ax.get_yticks())
+    ## ax.set_xticks(ax.get_xticks()[abs(ax.get_xticks())<=360])
+    ## ax.set_yticks(ax.get_yticks()[abs(ax.get_yticks())<=90])
+
+    #------------------------------------
+    # New code to use cartopy (2020-11)
+    #------------------------------------
+    ## balto_crs = ccrs.PlateCarree()
+    ## balto_crs = ccrs.PlateCarree(central_longitude=center_lon)
+#     im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+#                    vmin=gmin, vmax=gmax, extent=extent)
+#------------------------------------------------------------------------------
+# USE THIS BLOCK
+#     if (use_cartopy):
+#        im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+#                       vmin=gmin, vmax=gmax, extent=extent, transform=balto_crs)
+#------------------------------------------------------------------------------
+#     im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+#                    vmin=gmin, vmax=gmax, transform=balto_crs)
+                       
+    #----------------------------------     
+    # Old code, before use of cartopy
+    #----------------------------------
+    # im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+    #                vmin=gmin, vmax=gmax)                   
+    # im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+    #                vmin=gmin, vmax=gmax, extent=extent)
+
+    if (use_cartopy):
+       im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+                      vmin=gmin, vmax=gmax, extent=extent, transform=balto_crs)
+    else:
+        im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+                       vmin=gmin, vmax=gmax, extent=extent)
+   
+    #--------------------------------------------------------        
+    # NOTE!  Must save before "showing" or get blank image.
+    #        File format is inferred from extension.
+    #        e.g. TMP_Image.png, TMP_Image.jpg.
+    #--------------------------------------------------------
+    if (im_file is not None):  
+        plt.savefig( im_file )
+    if not(NO_SHOW):
+        plt.show()
+ 
+    plt.close()
+
+#   show_grid_as_image()
+#------------------------------------------------------------------------
+def show_grid_as_image_OLD( grid, long_name, extent=None,
+                        cmap='rainbow',
+                        stretch_name='hist_equal',
+                        stretch_a = 1.0,
+                        stretch_b = 1.0,
+                        stretch_p = 1.0,
+                        nodata_value=None,
+                        interp_method='nearest',
+                        ## crs='platecarree',  # for Geographic coordinates
+                        proj_name='mercator',
+                        projection=None,
                         NO_SHOW=False, im_file=None,
                         ## stretch='power_stretch3',
                         xsize=8, ysize=8, dpi=None): 
@@ -371,6 +583,14 @@ def show_grid_as_image( grid, long_name, extent=None,
     # ax  = fig.add_subplot(1,1,1, projection=balto_proj)
     ## ax.set_extent( extent, crs=balto_crs )  ##### NOT WORKING
 
+    #--------------------------------------------
+    # Set the CRS (Coordinate Reference System)
+    #-------------------------------------------------------
+    # See:  https://scitools.org.uk/cartopy/docs/latest/
+    #               tutorials/understanding_transform.html
+    #-------------------------------------------------------
+    balto_crs = ccrs.PlateCarree()   # For Geographic lon/lat coordinates.
+    
     #-------------------------
     # Set the map projection
     #--------------------------------------------
@@ -381,25 +601,27 @@ def show_grid_as_image( grid, long_name, extent=None,
     min_lat    = extent[2]
     max_lat    = extent[3]
     print('Extent =', extent )
-    #-------------------------------------------------------
-    # See:  https://scitools.org.uk/cartopy/docs/latest/
-    #               tutorials/understanding_transform.html
-    #-------------------------------------------------------
-    balto_crs  = ccrs.PlateCarree()   # For Geographic lon/lat coordinates.
-    projection = projection.lower()
-    balto_proj = get_map_projection(projection, globe=None,
-                     central_longitude=center_lon,
-                     central_latitude=center_lat,
-                     false_easting=0.0, false_northing=0.0,
-                     standard_parallels=(20.0, 50.0), scale_factor=None,
-                     min_latitude=-80.0, max_latitude=84.0,
-                     true_scale_latitude=None, latitude_true_scale=None,  ### BOTH
-                     secant_latitudes=None,
-                     pole_longitude=0.0, pole_latitude=90.0,
-                     central_rotated_longitude=0.0, sweep_axis='y',
-                     satellite_height=35785831, cutoff=-30, approx=None,
-                     southern_hemisphere=False, zone=15)  ######         
-    
+
+    if (projection is not None):
+        balto_proj = projection
+    else:
+        #------------------------------------------------
+        # This option requires using parameter defaults
+        #------------------------------------------------
+        proj_name = proj_name.lower()
+        balto_proj = get_map_projection(proj_name, globe=None,
+                         central_longitude=center_lon,
+                         central_latitude=center_lat,
+                         false_easting=0.0, false_northing=0.0,
+                         standard_parallels=(20.0, 50.0), scale_factor=None,
+                         min_latitude=-80.0, max_latitude=84.0,
+                         true_scale_latitude=None, latitude_true_scale=None,  ### BOTH
+                         secant_latitudes=None,
+                         pole_longitude=0.0, pole_latitude=90.0,
+                         central_rotated_longitude=0.0, sweep_axis='y',
+                         satellite_height=35785831, cutoff=-30, approx=None,
+                         southern_hemisphere=False, zone=15)  ######
+
     #------------------------------------------------
     # Create figure and axes (matplotlib + cartopy)
     #------------------------------------------------
@@ -410,7 +632,7 @@ def show_grid_as_image( grid, long_name, extent=None,
     ## ax.set_xlim([extent[0], extent[1]])
     ## ax.set_ylim([extent[2], extent[3]])
 
-    GRIDLINES = True
+    GRIDLINES = True  ######
     if (GRIDLINES):
         ## DRAW_LABELS = (projection == 'platecarree')  # (unsupported otherwise)
         DRAW_LABELS = False   # Now done by other means
@@ -449,8 +671,10 @@ def show_grid_as_image( grid, long_name, extent=None,
     ## balto_crs = ccrs.PlateCarree(central_longitude=center_lon)
 #     im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
 #                    vmin=gmin, vmax=gmax, extent=extent)
-    im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
-                   vmin=gmin, vmax=gmax, extent=extent, transform=balto_crs)
+#------------------------------------------------------------------------------
+#    im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+#                   vmin=gmin, vmax=gmax, extent=extent, transform=balto_crs)
+#------------------------------------------------------------------------------
 #     im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
 #                    vmin=gmin, vmax=gmax, transform=balto_crs)
                        
@@ -459,8 +683,8 @@ def show_grid_as_image( grid, long_name, extent=None,
     #----------------------------------
     # im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
     #                vmin=gmin, vmax=gmax)                   
-    # im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
-    #                vmin=gmin, vmax=gmax, extent=extent)
+    im = ax.imshow(grid2, interpolation=interp_method, cmap=cmap,
+                   vmin=gmin, vmax=gmax, extent=extent)
 
     #--------------------------------------------------------        
     # NOTE!  Must save before "showing" or get blank image.
@@ -474,9 +698,8 @@ def show_grid_as_image( grid, long_name, extent=None,
  
     plt.close()
 
-#   show_grid_as_image()
+#   show_grid_as_image_OLD()
 #------------------------------------------------------------------------
-
 
 
 

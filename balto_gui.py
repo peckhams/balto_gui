@@ -8,7 +8,7 @@ included in the same directory as the Jupyter notebook.
 """
 #------------------------------------------------------------------------
 #
-#  Copyright (C) 2020.  Scott D. Peckham
+#  Copyright (C) 2020-2022.  Scott D. Peckham
 #
 #------------------------------------------------------------------------
 
@@ -977,6 +977,25 @@ class balto_gui:
         # n_lines = len(lines)
         filenames = list()
         for line in lines:
+            if (".nc<" in line) or (".nc.gz<" in line):
+                parts = line.split('"')
+                filename = parts[1].replace('.dmr.html', '')
+                filenames.append( filename )
+        return filenames
+    
+    #   get_url_dir_filenames()
+    #--------------------------------------------------------------------
+    def get_url_dir_filenames_OLD(self):
+ 
+        #-----------------------------------------       
+        # Construct a list of filenames that are
+        # available in the opendap url directory
+        #-----------------------------------------
+        r = requests.get( self.data_url_dir.value )
+        lines = r.text.splitlines()
+        # n_lines = len(lines)
+        filenames = list()
+        for line in lines:
             if ('"sameAs": "http://' in line) and ('www' not in line):
                 line = line.replace('.html"', '')
                 parts = line.split("/")
@@ -984,7 +1003,7 @@ class balto_gui:
                 filenames.append( filename )
         return filenames
     
-    #   get_url_dir_filenames()
+    #   get_url_dir_filenames_OLD()
     #--------------------------------------------------------------------
     def update_filename_list(self, caller_obj=None):
 
@@ -2225,6 +2244,14 @@ class balto_gui:
             if (att_dict['coordinate_defines'] == 'center'):
                 CENTERS = True
 
+        #------------------------------------------------
+        # Are data longitudes in [-180,180] or [0,360]?
+        #------------------------------------------------
+        NO_NEGATIVE_LONS = True  # default
+        if ('actual_range' in att_dict.keys() ):
+            lon_range = att_dict['actual_range']
+            NO_NEGATIVE_LONS = (lon_range[0] >= 0)
+
         #------------------------------------
         # Get user-select minlat and maxlat
         #------------------------------------
@@ -2271,16 +2298,14 @@ class balto_gui:
         # Convert lons to have range [-180,180]?
         #-----------------------------------------
 #         lons = ((lons + 180.0) % 360) - 180
-#         lons.sort()  #####################
 #         user_maxlon = ((user_maxlon + 180.0) % 360) - 180
 #         user_minlon = ((user_minlon + 180.0) % 360) - 180
-#         if (user_minlon > user_maxlon):
-#             user_minlon -= 180.0
 
         #-------------------------------------------        
         # Convert user lons to have range [0,360]?
         #-------------------------------------------
-        if (minlon >= 0) and (maxlon <= 360):
+        ### if (minlon >= 0) and (maxlon <= 360):
+        if (NO_NEGATIVE_LONS):
             user_minlon = (user_minlon + 360.0) % 360
             user_maxlon = (user_maxlon + 360.0) % 360
 
